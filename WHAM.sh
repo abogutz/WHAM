@@ -251,9 +251,9 @@ function heatmap () {
 		# Generate trackdb track layout and coloring 
 		for BG in $SCRATCH_DIR"/"$FILE-*.bedgraph #(( CURR_BIN=0; CURR_BIN<=$MAX_READS; CURR_BIN+=$COLOR_BINS_SIZE ))
 		do
-			CURR_BIN=$(basename BG .bedgraph)
-			CURR_BIN=${BG//$FILE-/}
-			BW_NAME=$(basename BG .bedgraph).bw
+			CURR_BIN=$(basename $BG .bedgraph)
+			CURR_BIN=${CURR_BIN//$FILE-/}
+			BW_NAME=$(basename $BG .bedgraph).bw
 			BW=$GENOME_DIR$BW_NAME
 			if [[ -f $BG ]]; then
 				bedGraphToBigWig $BG $CHR_SIZES $BW
