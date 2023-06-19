@@ -1,7 +1,10 @@
-#!/bin/bash
-
-
-
+#! /bin/bash
+#SBATCH --account=<Group Name>            # required (format def-name)
+#SBATCH --cpus-per-task=10                        # number of cpus
+#SBATCH --mem-per-cpu=4G                 # memory; default unit is megabytes
+#SBATCH --time=01-12:00                   # time (DD-HH:MM)
+#SBATCH --mail-user=<email address>
+#SBATCH --mail-type=ALL
 
 #  _       ____  _____    __  _____
 # | |     / / / / /   |  /  |/  / /
@@ -17,25 +20,19 @@
 # Requires samtools, bedtools, R, bedToBigBed, bedGraphToBigWig
 # Within R: requires diptest, foreach, and doParallel
 
-
-
-
-SCRIPTS_DIR="project/def-mlorincz/scripts/misc/WGBS/"
+## Scripts Locations - CHANGE TO ACTUAL LOCATION ##
+SCRIPTS_DIR="/project/def-mlorincz/scripts/WHAM/"
 LOLLY_SCRIPT=$SCRIPTS_DIR"lolly.awk"
 DIP_AWK_SCRIPT=$SCRIPTS_DIR"diptest-bin.awk"
 HEAT_AWK_SCRIPT=$SCRIPTS_DIR"heatmap-bin.awk"
 BIGLOLLY_AS=$SCRIPTS_DIR"bigLolly-size.as"
 R_SCRIPT=$SCRIPTS_DIR"DipTest-parr.R"
+CONFIG=$SCRIPTS_DIR"ComputeCanada.config"
+source $CONFIG
 
-CHR_SIZES="/mnt/d/Data/Annotations/mm10/mm10.chrom.sizes"
 
 
-SCRATCH_DIR=""
-TEMP1=$SCRATCH_DIR"/temp"
-TEMP2=$SCRATCH_DIR"/temp2"
-
-THREADS=$SLURM_CPUS_PER_TASK
-
+## Default Values ##
 MAPQ=40
 MIN_CPG=4
 DIPTEST_BINSIZE=100
@@ -43,15 +40,116 @@ HEAT_GENOME_BINSIZE=25
 METH_BINS=5
 MAX_READS=10
 COLOR_BINS=5
+SCRATCH_DIR=""
+TEMP1=$SCRATCH_DIR"/temp"
+TEMP2=$SCRATCH_DIR"/temp2"
+THREADS=$SLURM_CPUS_PER_TASK
+CHR_SIZES="/mnt/d/Data/Annotations/mm10/mm10.chrom.sizes"
 
-INPUT=$1
-NAME=$(basename $INPUT .bam)
-LOLLY_OUTPUT=$NAME"_lolly.bb"
-DIPTEST_OUTPUT=$NAME"-"$GENOME_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
 
-GENOME_BED=$SCRATCH_DIR"/"$(basename $CHR_SIZES .sizes)".bounds"
-awk 'OFS="\t"{print $1, 0, $2}' $CHR_SIZES > $TEMP1
-sort -k1,1 -k2,2n $TEMP1 > $GENOME_BED
+## Help Messages ##
+HELP="USAGE:\t $(basename $0) [OPTIONS] -h for help"
+HELP_FULL="\n$HELP\n
+\nThis set of scripts will perform 3 analyses of Bismark-aligned data:\n\t1: Lollipop visualization of by-read methylation calls\n\t2: Heatmap of read-level methylation distribution\n\t3: Modality test for non-unimodal distribution\nRequires samtools, bedtools, bedToBigBed, bedGraphToBigWig, R. Within R: requires diptest, foreach, and doParallel\n\n
+OPTIONS:\n\t
+-h\tPrints help page.\n\t
+-d\tCheck dependencies and exit.\n\t
+-i\tInput file. Must be a Bismark aligned .bam file. REQUIRED\n\t
+-s\tScratch directory. Default=./\n\t
+-t\tNumber of threads to use. Default=SLURM_THREADS\n\t
+-q\tMinimum mapping quality for reads. Default=$MAPQ\n\t
+-C\tMinimum CpGs for reads. Default=$MIN_CPG\n\t
+-D\tGenome bin size for Diptest. Default=$DIPTEST_BINSIZE\n\t
+-H\tGenome bin size for Heatmp. Default=$HEAT_GENOME_BINSIZE\n\t
+-B\tNumber of methylation bins for Heatmap. Default=$METH_BINS\n\t
+-R\tTop end of teads for color in Heatmap. Default=$MAX_READS\n\t
+-c\tNumber of color bins for Heatmap. Default=$COLOR_BINS\n\t
+-z\tChromosome sizes file. Default= $CHR_SIZES\n\t"
+
+
+OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:d"
+
+function parseOptions () {
+	if ( ! getopts $OPTIONS opt); then
+		echo -e $HELP
+		exit 1
+	fi
+
+	while getopts $OPTIONS opt; do
+		case $opt in
+			h) #open the HELP menu
+				echo -e $HELP_FULL | fold -s
+				exit
+				;;
+			i) #set input file
+				INPUT=${OPTARG}
+				NAME=$(basename $INPUT .bam)
+				LOLLY_OUTPUT=$NAME"_lolly.bb"
+				DIPTEST_OUTPUT=$NAME"-"$GENOME_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
+				;;
+			q) #minimum MapQ
+				MAPQ=${OPTARG}
+				;;
+			C) #minimum CpGs in read
+				MIN_CPG=${OPTARG}
+				;;
+			D) #binsize for Diptest
+				DIPTEST_BINSIZE=${OPTARG}
+				;;
+			H) #binsize for heatmap
+				HEAT_GENOME_BINSIZE=${OPTARG}
+				;;
+			B) #number of methylation bins for heatmap
+				METH_BINS=${OPTARG}
+				;;
+			R) #max read depth for heatmap
+				MAX_READS=${OPTARG}
+				;;
+			c) #number of colour bins
+				COLOR_BINS=${OPTARG}
+				;;
+			s) #scratch directory
+				SCRATCH_DIR=${OPTARG}
+				TEMP1=$SCRATCH_DIR"/temp"
+				TEMP2=$SCRATCH_DIR"/temp2"
+				;;
+			t) #threads
+				THREADS=${OPTARG}
+				;;
+			z) #chromosome sizes file
+				CHR_SIZES=${OPTARG}
+				;;
+			d) #check Dependencies
+				checkDependencies
+				exit 0;
+				;;
+			\?)
+				echo -e "\n###############\nERROR: Invalid Option! \nTry '$(basename $0) -h' for help.\n###############" >&2
+				exit 1
+				;;
+		esac
+	done
+	if [[ ! -f $INPUT ]]; then
+		echo "Not a valid input file."
+		exit 1
+	fi
+}
+
+function checkDependencies () {
+	DEPENDENCIES=(bedtools awk samtools Rscript bedToBigBed bedGraphToBigWig)
+	echo -e "Checking Dependencies:"
+	EXIT=0
+	for COMMAND in "${DEPENDENCIES[@]}"; do
+		echo -e "[checkDependencies] $COMMAND..."
+		command -v $COMMAND > /dev/null 2>&1 || {
+			echo -e >&2 "\t\t$COMMAND not found!"
+			EXIT=1
+		}
+	done
+	if [[ $EXIT = 1 ]] ; then
+		exit 1
+	fi
+}
 
 function initializeHub () {
 	HUB="Track_Hub/"
@@ -172,10 +270,20 @@ function heatmap () {
 	done
 }
 
+function makeBounds () { # Take chr sizes file and make bed file
+	GENOME_BED=$SCRATCH_DIR"/"$(basename $CHR_SIZES .sizes)".bounds"
+	awk 'OFS="\t"{print $1, 0, $2}' $CHR_SIZES > $TEMP1
+	sort -k1,1 -k2,2n $TEMP1 > $GENOME_BED
+}
 
+## Actually Run Stuff ##
+loadModules
+parseOptions $@
+makeBounds
+initializeHub
+makeLollies
+heatmap
+dipTest
 
-
-
-
-#rm -r $SCRATCH_DIR
+rm -r $SCRATCH_DIR
 

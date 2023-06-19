@@ -1,8 +1,9 @@
 #!/usr/bin/Rscript
 
 # diptest, foreach, and doParallel must be installed
-#library(diptest)
+library(diptest)
 library(foreach)
+library(doParallel)
 
 # 3 input arguments - input file, output file, number of threads to use
 args = commandArgs(trailingOnly = TRUE)
