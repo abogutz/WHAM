@@ -8,8 +8,8 @@
 
 #  _       ____  _____    __  _____
 # | |     / / / / /   |  /  |/  / /
-# | | /| / / /_/ / /| | / /|_/ / / 
-# | |/ |/ / __  / ___ |/ /  / /_/  
+# | | /| / / /_/ / /| | / /|_/ / /
+# | |/ |/ / __  / ___ |/ /  / /_/
 # |__/|__/_/ /_/_/  |_/_/  /_(_)
 #
 # WHAM: WGBS Heterogeneity Analysis at the Molecular level
@@ -22,11 +22,12 @@
 
 ## Scripts Locations - CHANGE TO ACTUAL LOCATION ##
 SCRIPTS_DIR="/project/def-mlorincz/scripts/WHAM/"
+
 LOLLY_SCRIPT=$SCRIPTS_DIR"lolly.awk"
 DIP_AWK_SCRIPT=$SCRIPTS_DIR"diptest-bin.awk"
 HEAT_AWK_SCRIPT=$SCRIPTS_DIR"heatmap-bin.awk"
 BIGLOLLY_AS=$SCRIPTS_DIR"bigLolly-size.as"
-R_SCRIPT=$SCRIPTS_DIR"DipTest-parr.R"
+R_SCRIPT=$SCRIPTS_DIR"DipTest.R"
 CONFIG=$SCRIPTS_DIR"ComputeCanada.config"
 source $CONFIG
 
@@ -44,7 +45,12 @@ SCRATCH_DIR=""
 TEMP1=$SCRATCH_DIR"/temp"
 TEMP2=$SCRATCH_DIR"/temp2"
 THREADS=$SLURM_CPUS_PER_TASK
-CHR_SIZES="/mnt/d/Data/Annotations/mm10/mm10.chrom.sizes"
+CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.chrom.sizes"
+
+
+HUB="Track_Hub/"
+GENOME_DIR=$HUB"mm10/"
+TRACKDB=$GENOME_DIR"trackDb.txt"
 
 
 ## Help Messages ##
@@ -84,8 +90,8 @@ function parseOptions () {
 			i) #set input file
 				INPUT=${OPTARG}
 				NAME=$(basename $INPUT .bam)
-				LOLLY_OUTPUT=$NAME"_lolly.bb"
-				DIPTEST_OUTPUT=$NAME"-"$GENOME_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
+				LOLLY_OUTPUT=$GENOME_DIR$NAME"_lolly.bb"
+				DIPTEST_OUTPUT=$GENOME_DIR$NAME"-"$GENOME_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
 				;;
 			q) #minimum MapQ
 				MAPQ=${OPTARG}
@@ -110,6 +116,7 @@ function parseOptions () {
 				;;
 			s) #scratch directory
 				SCRATCH_DIR=${OPTARG}
+				mkdir $SCRATCH_DIR
 				TEMP1=$SCRATCH_DIR"/temp"
 				TEMP2=$SCRATCH_DIR"/temp2"
 				;;
@@ -152,9 +159,6 @@ function checkDependencies () {
 }
 
 function initializeHub () {
-	HUB="Track_Hub/"
-	GENOME_DIR=$HUB"mm10/"
-	TRACKDB=$GENOME_DIR"trackDb.txt"
 	mkdir $HUB
 	mkdir $GENOME_DIR
 	printf "hub <HubNameWithoutSpace>\nshortLabel <max 17 char, display on side>\nlongLabel Hub to display <fill> data at UCSC\ngenomesFile genomes.txt\nemail <email-optional>" > $HUB/hub.txt
@@ -199,7 +203,7 @@ function heatmap () {
 	let METH_BINS_SIZE=100/$METH_BINS
 	let COLOR_BINS_SIZE=$MAX_READS/$COLOR_BINS
 	PRIORITY=1
-	REF_BED="ref"-$HEAT_GENOME_BINSIZE"bp.bed"
+	REF_BED=$SCRATCH_DIR"ref"-$HEAT_GENOME_BINSIZE"bp.bed"
 	
 	printf "track %s\ncontainer multiWig\nshortLabel %s\nlongLabel %s\ntype bigWig\nvisibility full\nmaxHeightPixels 100:60:25\nconfigurable on\nviewLimits 0:100\nalwaysZero on\naggregate solidOverlay\nshowSubtrackColorOnUi on\npriority 1.0\n\n" $NAME $NAME $NAME | tee -a $TRACKDB
 
@@ -220,6 +224,7 @@ function heatmap () {
 		rm $FILE
 		
 		echo "Binning by depth..." # Third binning - determine color bin from read depth
+		pushd $SCRATCH_DIR # Move to scratch directory for bin bigwig creations
 		awk -v bin=$BIN -v colorBinSize=$COLOR_BINS_SIZE -v maxReads=$MAX_READS 'OFS="\t"{
 			done=0;
 			if($4 > 0) {
@@ -241,6 +246,7 @@ function heatmap () {
 		awk -v bin=$BIN 'OFS="\t"{
 			print $0, bin;
 		}' $GENOME_BED > $FILE"-0.bedgraph"
+		popd # Return from scratch directory
 		
 		# Generate trackdb track layout and coloring 
 		for BG in $SCRATCH_DIR"/"$FILE-*.bedgraph #(( CURR_BIN=0; CURR_BIN<=$MAX_READS; CURR_BIN+=$COLOR_BINS_SIZE ))
