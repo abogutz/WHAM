@@ -21,7 +21,7 @@
 # Within R: requires diptest, foreach, and doParallel
 
 ## Scripts Locations - CHANGE TO ACTUAL LOCATION ##
-SCRIPTS_DIR="/project/def-mlorincz/scripts/WHAM/"
+SCRIPTS_DIR="/project/def-mlorincz/scripts/misc/WHAM/"
 
 LOLLY_SCRIPT=$SCRIPTS_DIR"lolly.awk"
 DIP_AWK_SCRIPT=$SCRIPTS_DIR"diptest-bin.awk"
@@ -41,7 +41,7 @@ HEAT_GENOME_BINSIZE=25
 METH_BINS=5
 MAX_READS=10
 COLOR_BINS=5
-SCRATCH_DIR=""
+SCRATCH_DIR="./"
 TEMP1=$SCRATCH_DIR"/temp"
 TEMP2=$SCRATCH_DIR"/temp2"
 THREADS=$SLURM_CPUS_PER_TASK
