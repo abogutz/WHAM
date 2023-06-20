@@ -170,7 +170,8 @@ function makeLollies () {
 	samtools view -q $MAPQ $INPUT | awk -f $LOLLY_SCRIPT | sort -k1,1 -k2,2n -T $SCRATCH_DIR > $TEMP1
 	bedToBigBed -as=$BIGLOLLY_AS -type=bed9+1 $TEMP1 $CHR_SIZES $LOLLY_OUTPUT
 	rm $TEMP1
-	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigLolly\nbigDataUrl %s\nvisibility full\nlollyNoStems on\nlollySizeField 10\nmaxWindowToDraw 20000\n\n" $LOLLY_OUTPUT $LOLLY_OUTPUT $LOLLY_OUTPUT $LOLLY_OUTPUT | tee -a $TRACKDB
+	LOLLY_NAME=$(basename $LOLLY_OUTPUT)
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigLolly\nbigDataUrl %s\nvisibility full\nlollyNoStems on\nlollySizeField 10\nmaxWindowToDraw 20000\n\n" $LOLLY_NAME $LOLLY_NAME $LOLLY_NAME $LOLLY_NAME | tee -a $TRACKDB
 	echo "Finished Lolly Generation"
 }
 
@@ -195,7 +196,8 @@ function dipTest () {
 	echo "Generating bigwig..."
 	bedGraphToBigWig $TEMP1 $CHR_SIZES $DIPTEST_OUTPUT
 	rm $REF_BED $TEMP1 $TEMP2
-	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_OUTPUT $DIPTEST_OUTPUT $DIPTEST_OUTPUT $DIPTEST_OUTPUT | tee -a $TRACKDB
+	DIPTEST_NAME=$(basename $DIPTEST_OUTPUT)
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME | tee -a $TRACKDB
 }
 
 
