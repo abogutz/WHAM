@@ -4,56 +4,58 @@
 # Made by Aaron
 # Last Updated 2023-05-10
 
-BEGIN{
+BEGIN {
 	OFS="\t";
-	chr="";
 	black="0,0,0";
 	white="255,255,255";
 	green="0,255,0";
 	red="255,0,0"
-	grey="100,100,100";
-	if( ! minDist ) { minDist=20; } # Arbitrary distance between reads on same "strand"
+	grey="150,150,150";
 	if( ! size ) { size=2; } # Default size value - less than 2 is somewhat unreadable
 	if( ! capSize ) { capSize=2; } # Size for start and end flags
-	done=1;
+	if( ! minDist ) { minDist=20; } # Arbitrary distance between reads on same "strand"
+	if( ! gapStep ) { gapStep=5; } # Arbitrary distance gap indicators
+	if( ! gapSize ) { gapSize=1; } # Make gaps itty bitty
 }{
 	while ( $3 !~ /chr[0-9XY]*$/ && done>0 ) { # Ignore non-canonical chr
 		done=getline;
 	}
 	if ( $3 != chr ) { # New chromosome - reset strand count
 		chr=$3;
-		lastEnd=0;
-		strand=1;
+		for(x=1; x<1000; x++) {
+			end[x]=0;
+		}
 	}
 	methCalls=substr($16, 6) # Remove leading characters in meth calls - which should always be in column 16
-	calls=patsplit(methCalls, meth, /[zZ]/, len); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
-	if ( calls > 0 && done > 0 ) {
+	calls=split(methCalls, len, /[zZ]/, meth); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
+	if ( calls > 1 ) {
 		start=$4;
-		if ( start > lastEnd + minDist ) {  # If at least minDist away from end of last reset, start at strand 1 again
-			strand=1;
-		} else {
-			strand++;
+		for(strand=1; strand<1000; strand++) {
+			if( start>end[strand]+minDist ) {
+				break;
+			}
 		}
-		if( strand <=1000 ) { # Only print out 1000 strands max
+		if(strand < 1000 ) {
 			print chr, start-1, start, "start", strand, ".", 0, 0, green, capSize; # print start in green
-
-			for ( x=1 ; x<=calls ; x++ ) {
-				start+=length(len[x-1]);
+			for ( x=1 ; x<calls ; x++ ) {
+				start+=length(len[x]);
 				if ( meth[x] == "z" ) { # unmethylated
 					colour = white;
-				} else if (meth[x] == "Z" ) { # methylated
+				} else { # methylated
 					colour = black;
-				} else { # Just in case
-					colour = grey;
 				}
 				print chr, start-1, start, meth[x], strand, ".", 0, 0, colour, size;
 				start++; # Increment over Cytosine
 			}
-			start+=length(len[x-1]); # Add final interval
-			if ( strand == 1 ) {
-				lastEnd=start;
-			}
+			start+=length(len[x]); # Add final interval
+			end[strand]=start;
 			print chr, start-1, start, "end", strand, ".", 0, 0, red, capSize; # print end in red
+			gap=match(methCalls, /\++/);
+			if(gap != 0) {
+				for(start=0; start<RLENGTH; start+=gapStep) {
+								print chr, $4+gap+start-1, $4+gap+start, "gap", strand, ".", 0, 0, grey, gapSize; # gap in grey
+				}
+			}
 		}
 	}
 }

@@ -21,8 +21,9 @@
 # Within R: requires diptest, foreach, and doParallel
 
 ## Scripts Locations - CHANGE TO ACTUAL LOCATION ##
-SCRIPTS_DIR="/project/def-mlorincz/scripts/misc/WHAM/"
+SCRIPTS_DIR="/mnt/d/Bioinformatics/Scripts/CpG+DNAme/WHAM-stranded/" #/project/def-mlorincz/scripts/misc/WHAM/"
 
+PE_PARSER=$SCRIPTS_DIR"PE-methParser.awk"
 LOLLY_SCRIPT=$SCRIPTS_DIR"lolly.awk"
 DIP_AWK_SCRIPT=$SCRIPTS_DIR"diptest-bin.awk"
 HEAT_AWK_SCRIPT=$SCRIPTS_DIR"heatmap-bin.awk"
@@ -44,6 +45,7 @@ COLOR_BINS=5
 SCRATCH_DIR="./"
 TEMP1=$SCRATCH_DIR"/temp"
 TEMP2=$SCRATCH_DIR"/temp2"
+PE_BAM=$SCRATCH_DIR"/temp.bam"
 THREADS=$SLURM_CPUS_PER_TASK
 CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.chrom.sizes"
 
@@ -167,11 +169,13 @@ function initializeHub () {
 
 function makeLollies () {
 	echo "Starting Lolly Generation"
+	echo "Converting to lolly..."
 	samtools view -q $MAPQ $INPUT | awk -f $LOLLY_SCRIPT | sort -k1,1 -k2,2n -T $SCRATCH_DIR > $TEMP1
+	echo "Compressing lollies..."
 	bedToBigBed -as=$BIGLOLLY_AS -type=bed9+1 $TEMP1 $CHR_SIZES $LOLLY_OUTPUT
-	rm $TEMP1
+#	rm $TEMP1
 	LOLLY_NAME=$(basename $LOLLY_OUTPUT)
-	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigLolly\nbigDataUrl %s\nvisibility full\nlollyNoStems on\nlollySizeField 10\nmaxWindowToDraw 20000\n\n" $LOLLY_NAME $LOLLY_NAME $LOLLY_NAME $LOLLY_NAME | tee -a $TRACKDB
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigLolly\nbigDataUrl %s\nvisibility full\nautoScale on\nlollyNoStems on\nlollySizeField 10\nmaxWindowToDraw 20000\n\n" $LOLLY_NAME $LOLLY_NAME $LOLLY_NAME $LOLLY_NAME | tee -a $TRACKDB
 	echo "Finished Lolly Generation"
 }
 
@@ -284,14 +288,37 @@ function makeBounds () { # Take chr sizes file and make bed file
 	sort -k1,1 -k2,2n $TEMP1 > $GENOME_BED
 }
 
+function parsePE () {
+	FLAG=$(samtools view $INPUT | head -n 1 | cut -f2)
+	if [[ $((FLAG&1)) == 1 ]] ; then #Paired-end
+		PAIRED=true
+	else
+		PAIRED=false
+	fi
+	echo "Data are Paired-end:" $PAIRED
+	if [[ $PAIRED == true ]] ; then
+		echo "Sorting PE BAM by read name..."
+		samtools sort -@ $THREADS -n $INPUT > $TEMP1
+		echo "Combining Methylation for PE reads..."
+		samtools view -q $MAPQ $TEMP1 | awk -f $PE_PARSER > $TEMP2
+		samtools view -H $INPUT > $TEMP1
+		echo "Compressing PE Data..."
+		cat $TEMP1 $TEMP2 | samtools view -bh -o $TEMP1
+		echo "Sorting PE Data..."
+		samtools sort -@ $THREADS -o $PE_BAM $TEMP1
+		INPUT=$PE_BAM
+	fi
+}
+
 ## Actually Run Stuff ##
 loadModules
 parseOptions $@
 makeBounds
 initializeHub
+parsePE
 makeLollies
 heatmap
 dipTest
 
-rm -r $SCRATCH_DIR
+#rm -r $SCRATCH_DIR
 
