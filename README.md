@@ -1,2 +1,3 @@
 # WHAM
- DNAme Heterogeneity Analysis
+
+WGBS Heterogeneity Analysis at the Molecular level
