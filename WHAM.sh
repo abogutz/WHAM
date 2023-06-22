@@ -121,6 +121,7 @@ function parseOptions () {
 				mkdir $SCRATCH_DIR
 				TEMP1=$SCRATCH_DIR"/temp"
 				TEMP2=$SCRATCH_DIR"/temp2"
+				PE_BAM=$SCRATCH_DIR"/temp.bam"
 				;;
 			t) #threads
 				THREADS=${OPTARG}
@@ -320,5 +321,5 @@ makeLollies
 heatmap
 dipTest
 
-#rm -r $SCRATCH_DIR
+rm -r $SCRATCH_DIR
 
