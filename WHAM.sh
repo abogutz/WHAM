@@ -304,7 +304,7 @@ function parsePE () {
 		samtools view -q $MAPQ $TEMP1 | awk -f $PE_PARSER > $TEMP2
 		samtools view -H $INPUT > $TEMP1
 		echo "Compressing PE Data..."
-		cat $TEMP1 $TEMP2 | samtools view -bh -o $TEMP1
+		cat $TEMP1 $TEMP2 | samtools view -@ $THREADS -bh -o $TEMP1
 		echo "Sorting PE Data..."
 		samtools sort -@ $THREADS -o $PE_BAM $TEMP1
 		INPUT=$PE_BAM
