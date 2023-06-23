@@ -1,9 +1,9 @@
 #! /bin/bash
-#SBATCH --account=<Group Name>            # required (format def-name)
+#SBATCH --account=def-mlorincz           # required (format def-name)
 #SBATCH --cpus-per-task=10                        # number of cpus
 #SBATCH --mem-per-cpu=4G                 # memory; default unit is megabytes
 #SBATCH --time=01-12:00                   # time (DD-HH:MM)
-#SBATCH --mail-user=<email address>
+#SBATCH --mail-user=aaron.bogutz@ubc.ca
 #SBATCH --mail-type=ALL
 
 #  _       ____  _____    __  _____
@@ -21,7 +21,7 @@
 # Within R: requires diptest, foreach, and doParallel
 
 ## Scripts Locations - CHANGE TO ACTUAL LOCATION ##
-SCRIPTS_DIR="/mnt/d/Bioinformatics/Scripts/CpG+DNAme/WHAM-stranded/" #/project/def-mlorincz/scripts/misc/WHAM/"
+SCRIPTS_DIR="/project/def-mlorincz/scripts/misc/WHAM/"
 
 PE_PARSER=$SCRIPTS_DIR"PE-methParser.awk"
 LOLLY_SCRIPT=$SCRIPTS_DIR"lolly.awk"
@@ -47,7 +47,7 @@ TEMP1=$SCRATCH_DIR"/temp"
 TEMP2=$SCRATCH_DIR"/temp2"
 PE_BAM=$SCRATCH_DIR"/temp.bam"
 THREADS=$SLURM_CPUS_PER_TASK
-CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.chrom.sizes"
+CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.sizes"
 
 
 HUB="Track_Hub/"
@@ -299,14 +299,14 @@ function parsePE () {
 	echo "Data are Paired-end:" $PAIRED
 	if [[ $PAIRED == true ]] ; then
 		echo "Sorting PE BAM by read name..."
-		samtools sort -@ $THREADS -n $INPUT > $TEMP1
+		samtools sort -@ $THREADS -m 3G -T $SCRATCH_DIR -n $INPUT > $TEMP1
 		echo "Combining Methylation for PE reads..."
 		samtools view -q $MAPQ $TEMP1 | awk -f $PE_PARSER > $TEMP2
 		samtools view -H $INPUT > $TEMP1
 		echo "Compressing PE Data..."
 		cat $TEMP1 $TEMP2 | samtools view -@ $THREADS -bh -o $TEMP1
 		echo "Sorting PE Data..."
-		samtools sort -@ $THREADS -o $PE_BAM $TEMP1
+		samtools sort -@ $THREADS -m 3G -T $SCRATCH_DIR -o $PE_BAM $TEMP1
 		INPUT=$PE_BAM
 	fi
 }
