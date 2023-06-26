@@ -15,59 +15,59 @@ BEGIN{
 		done=getline;
 	}
 	if(read1 == 1) { # First read
-		storeValues();
-	} else { # Second Read
-		if($1 != name ) {
-			print prevRead;
+		if(substr($16, 6) ~ /[zZ]/) {
 			storeValues();
+		}
+	} else { # Second Read
+		if(substr($16, 6) !~ /[zZ]/) {
+			print prevRead;
+			read1=1;
 		} else {
-			methCalls2=substr($16, 6);
-			if($4 < r1start) {
-				if($4+length(methCalls2) > r1start) {
-					methCalls2=substr(methCalls2,1,r1start-$4)
-					methCalls=(methCalls2)(methCalls)
-				} else {
-					gap=r1start-($4+length(methCalls2));
+			if($1 != name ) {
+				print prevRead;
+				storeValues();
+			} else {
+				methCalls2=substr($16, 6);
+				if($4 < r1start) { # R2 precedes R1
+					if($4+length(methCalls2) > r1start) { # R2 terminates inside R1
+						methCalls2=substr(methCalls2,1,r1start-$4)
+						methCalls=(methCalls2)(methCalls)
+					} else { # Gap between R2 and R1
+						gap=r1start-($4+length(methCalls2));
+						if(gap >= maxGap ) {
+							print prevRead;
+							storeValues();
+						} else {
+							stuffer="";
+							for(x=1; x<=gap; x++) {
+								stuffer=stuffer"+";
+							}
+							methCalls=(methCalls2)(stuffer)(methCalls);
+						}
+					}
+					r1start=$4
+				} else if($4 < r1end) { # R2 starts in R1
+					methCalls2=substr(methCalls2,r1end-$4)
+					methCalls=(methCalls)(methCalls2)
+				} else { # Gap between R1 and R2
+					gap=$4-r1end;
 					if(gap >= maxGap ) {
 						print prevRead;
-						name=$1;
-						r1chr=$3;
-						r1start=$4;
-						methCalls=substr($16, 6); # Remove leading characters in meth calls - which should always be in column 16
-						r1end=r1start+length(methCalls);
-						read1=0;
-						prevRead=$0;
+						storeValues();
 					} else {
 						stuffer="";
 						for(x=1; x<=gap; x++) {
 							stuffer=stuffer"+";
 						}
-						methCalls=(methCalls2)(stuffer)(methCalls);
+						methCalls=(methCalls)(stuffer)(methCalls2);
 					}
 				}
-				r1start=$4
-			} else if($4< r1end) {
-				methCalls2=substr(methCalls2,r1end-$4)
-				methCalls=(methCalls)(methCalls2)
-			} else {
-				gap=$4-r1end;
-				if(gap >= maxGap ) {
-					print $0;
-				storeValues();
-			read1=0;
-				} else {
-					stuffer="";
-					for(x=1; x<=gap; x++) {
-						stuffer=stuffer"+";
-					}
-					methCalls=(methCalls)(stuffer)(methCalls2);
-				}
+				$3=r1chr;
+				$4=r1start;
+				$16="XM:Z:"methCalls;
+				print $0;
+				read1=1;
 			}
-			$3=r1chr;
-			$4=r1start;
-			$16="XM:Z:"methCalls;
-			print $0;
-			read1=1;
 		}
 	}
 }

@@ -289,7 +289,7 @@ function makeBounds () { # Take chr sizes file and make bed file
 	sort -k1,1 -k2,2n $TEMP1 > $GENOME_BED
 }
 
-function parsePE () {
+function parsePE () { # Combine Methylation strings from PE reads into a single entry
 	FLAG=$(samtools view $INPUT | head -n 1 | cut -f2)
 	if [[ $((FLAG&1)) == 1 ]] ; then #Paired-end
 		PAIRED=true
