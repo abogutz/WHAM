@@ -171,7 +171,8 @@ function initializeHub () {
 function makeLollies () {
 	echo "Starting Lolly Generation"
 	echo "Converting to lolly..."
-	samtools view -q $MAPQ $INPUT | awk -f $LOLLY_SCRIPT | sort -k1,1 -k2,2n -T $SCRATCH_DIR > $TEMP1
+	samtools view -q $MAPQ $INPUT | awk -f $LOLLY_SCRIPT > $TEMP2
+	sort -k1,1 -k2,2n --parallel=$THREADS --buffer-size="3G" -T $SCRATCH_DIR $TEMP2 > $TEMP1
 	echo "Compressing lollies..."
 	bedToBigBed -as=$BIGLOLLY_AS -type=bed9+1 $TEMP1 $CHR_SIZES $LOLLY_OUTPUT
 #	rm $TEMP1
