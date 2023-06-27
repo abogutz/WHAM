@@ -19,6 +19,7 @@
 # 3: Modality test for non-unimodal distribution
 # Requires samtools, bedtools, R, bedToBigBed, bedGraphToBigWig
 # Within R: requires diptest, foreach, and doParallel
+# If creating traditional plots, additionally requires bismark and Deeptools bamCoverage
 
 ## Scripts Locations - CHANGE TO ACTUAL LOCATION ##
 SCRIPTS_DIR="/project/def-mlorincz/scripts/misc/WHAM/"
@@ -31,6 +32,8 @@ BIGLOLLY_AS=$SCRIPTS_DIR"bigLolly-size.as"
 R_SCRIPT=$SCRIPTS_DIR"DipTest.R"
 CONFIG=$SCRIPTS_DIR"ComputeCanada.config"
 source $CONFIG
+
+BAMCOVERAGE="/project/def-mlorincz/scripts/utilities/miniconda3/bin/bamCoverage"
 
 
 
@@ -48,6 +51,7 @@ TEMP2=$SCRATCH_DIR"/temp2"
 PE_BAM=$SCRATCH_DIR"/temp.bam"
 THREADS=$SLURM_CPUS_PER_TASK
 CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.sizes"
+TRAD=0
 
 
 HUB="Track_Hub/"
@@ -58,7 +62,7 @@ TRACKDB=$GENOME_DIR"trackDb.txt"
 ## Help Messages ##
 HELP="USAGE:\t $(basename $0) [OPTIONS] -h for help"
 HELP_FULL="\n$HELP\n
-\nThis set of scripts will perform 3 analyses of Bismark-aligned data:\n\t1: Lollipop visualization of by-read methylation calls\n\t2: Heatmap of read-level methylation distribution\n\t3: Modality test for non-unimodal distribution\nRequires samtools, bedtools, bedToBigBed, bedGraphToBigWig, R. Within R: requires diptest, foreach, and doParallel\n\n
+\nThis set of scripts will perform 3 analyses of Bismark-aligned data:\n\t1: Lollipop visualization of by-read methylation calls\n\t2: Heatmap of read-level methylation distribution\n\t3: Modality test for non-unimodal distribution\nRequires samtools, bedtools, bedToBigBed, bedGraphToBigWig, R.\nWithin R: requires diptest, foreach, and doParallel\n\n
 OPTIONS:\n\t
 -h\tPrints help page.\n\t
 -d\tCheck dependencies and exit.\n\t
@@ -72,10 +76,11 @@ OPTIONS:\n\t
 -B\tNumber of methylation bins for Heatmap. Default=$METH_BINS\n\t
 -R\tTop end of teads for color in Heatmap. Default=$MAX_READS\n\t
 -c\tNumber of color bins for Heatmap. Default=$COLOR_BINS\n\t
--z\tChromosome sizes file. Default= $CHR_SIZES\n\t"
+-z\tChromosome sizes file. Default= $CHR_SIZES\n\t
+-p\tCreate traditional methylation and coverage tracks. Default=OFF"
 
 
-OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:d"
+OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:dp"
 
 function parseOptions () {
 	if ( ! getopts $OPTIONS opt); then
@@ -94,6 +99,8 @@ function parseOptions () {
 				NAME=$(basename $INPUT .bam)
 				LOLLY_OUTPUT=$GENOME_DIR$NAME"_lolly.bb"
 				DIPTEST_OUTPUT=$GENOME_DIR$NAME"-"$GENOME_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
+				METHYL_OUTPUT=$GENOME_DIR$NAME"_methylation.bw"
+				COVERAGE_OUTPUT=$GENOME_DIR$NAME"_coverage.bw"
 				;;
 			q) #minimum MapQ
 				MAPQ=${OPTARG}
@@ -133,6 +140,9 @@ function parseOptions () {
 				checkDependencies
 				exit 0;
 				;;
+			p) #make traditional plots
+				TRAD=1
+				;;
 			\?)
 				echo -e "\n###############\nERROR: Invalid Option! \nTry '$(basename $0) -h' for help.\n###############" >&2
 				exit 1
@@ -147,6 +157,9 @@ function parseOptions () {
 
 function checkDependencies () {
 	DEPENDENCIES=(bedtools awk samtools Rscript bedToBigBed bedGraphToBigWig)
+	if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
+		DEPENDENCIES=(${DEPENDENCIES[@]} bismark $BAMCOVERAGE)
+	fi
 	echo -e "Checking Dependencies:"
 	EXIT=0
 	for COMMAND in "${DEPENDENCIES[@]}"; do
@@ -181,7 +194,6 @@ function makeLollies () {
 	echo "Finished Lolly Generation"
 }
 
-
 function dipTest () {
 	echo "Starting Diptest Calculations"
 	REF_BED=$SCRATCH_DIR"/ref"-$DIPTEST_BINSIZE"bp.bed"
@@ -203,9 +215,8 @@ function dipTest () {
 	bedGraphToBigWig $TEMP1 $CHR_SIZES $DIPTEST_OUTPUT
 	rm $REF_BED $TEMP1 $TEMP2
 	DIPTEST_NAME=$(basename $DIPTEST_OUTPUT)
-	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME | tee -a $TRACKDB
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 255,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME | tee -a $TRACKDB
 }
-
 
 function heatmap () {
 	let METH_BINS_SIZE=100/$METH_BINS
@@ -312,11 +323,26 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 	fi
 }
 
+function makeTradPlots () {
+	samtools index $INPUT
+	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph $INPUT
+	zcat $SCRATCH_DIR"*.bedGraph" > $TEMP1
+	bedGraphToBigWig $TEMP1 $CHR_SIZES $METHYL_OUTPUT
+	$BAMCOVERAGE --minMappingQuality $MAPQ -p $THREADS -b $INPUT -o $COVERAGE_OUTPUT
+	METHYL_NAME=$(basename $METHYL_OUTPUT)
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $METHYL_NAME $METHYL_NAME $METHYL_NAME $METHYL_NAME | tee -a $TRACKDB
+	COVERAGE_NAME=$(basename $COVERAGE_OUTPUT)
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $COVERAGE_NAME $COVERAGE_NAME $COVERAGE_NAME $COVERAGE_NAME | tee -a $TRACKDB
+}
+
 ## Actually Run Stuff ##
 loadModules
 parseOptions $@
 makeBounds
 initializeHub
+if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
+	makeTradPlots
+fi
 parsePE
 makeLollies
 heatmap
