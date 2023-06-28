@@ -92,10 +92,6 @@ function parseOptions () {
 			i) #set input file
 				INPUT=${OPTARG}
 				NAME=$(basename $INPUT .bam)
-				LOLLY_OUTPUT=$GENOME_DIR$NAME"_lolly.bb"
-				DIPTEST_OUTPUT=$GENOME_DIR$NAME"-"$GENOME_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
-				METHYL_OUTPUT=$GENOME_DIR$NAME"_methylation.bw"
-				COVERAGE_OUTPUT=$GENOME_DIR$NAME"_coverage.bw"
 				;;
 			q) #minimum MapQ
 				MAPQ=${OPTARG}
@@ -178,6 +174,11 @@ function initializeHub () {
 	mkdir $GENOME_DIR
 	printf "hub <HubNameWithoutSpace>\nshortLabel <max 17 char, display on side>\nlongLabel Hub to display <fill> data at UCSC\ngenomesFile genomes.txt\nemail <email-optional>" > $HUB/hub.txt
 	printf "genome %s\ntrackDb %s/trackDb.txt" $GENOME $GENOME > $HUB/genomes.txt
+	
+	LOLLY_OUTPUT=$GENOME_DIR$NAME"_lolly.bb"
+	DIPTEST_OUTPUT=$GENOME_DIR$NAME"-"$GENOME_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
+	METHYL_OUTPUT=$GENOME_DIR$NAME"_methylation.bw"
+	COVERAGE_OUTPUT=$GENOME_DIR$NAME"_coverage.bw"
 }
 
 function makeLollies () {
@@ -326,7 +327,7 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 
 function makeTradPlots () {
 	samtools index $INPUT
-	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph $INPUT
+	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT
 	zcat $SCRATCH_DIR"*.bedGraph" > $TEMP1
 	bedGraphToBigWig $TEMP1 $CHR_SIZES $METHYL_OUTPUT
 	$BAMCOVERAGE --minMappingQuality $MAPQ -p $THREADS -b $INPUT -o $COVERAGE_OUTPUT
