@@ -54,11 +54,6 @@ CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.sizes"
 TRAD=0
 
 
-HUB="Track_Hub/"
-GENOME_DIR=$HUB"mm10/"
-TRACKDB=$GENOME_DIR"trackDb.txt"
-
-
 ## Help Messages ##
 HELP="USAGE:\t $(basename $0) [OPTIONS] -h for help"
 HELP_FULL="\n$HELP\n
@@ -175,10 +170,14 @@ function checkDependencies () {
 }
 
 function initializeHub () {
+	HUB="Track_Hub/"
+	GENOME=$(basename $CHR_SIZES | cut -d. -f1)
+	GENOME_DIR=$HUB$GENOME"/"
+	TRACKDB=$GENOME_DIR"trackDb.txt"
 	mkdir $HUB
 	mkdir $GENOME_DIR
 	printf "hub <HubNameWithoutSpace>\nshortLabel <max 17 char, display on side>\nlongLabel Hub to display <fill> data at UCSC\ngenomesFile genomes.txt\nemail <email-optional>" > $HUB/hub.txt
-	printf "genome mm10\ntrackDb mm10/trackDb.txt" > $HUB/genomes.txt
+	printf "genome %s\ntrackDb %s/trackDb.txt" $GENOME $GENOME > $HUB/genomes.txt
 }
 
 function makeLollies () {
@@ -223,6 +222,8 @@ function heatmap () {
 	let COLOR_BINS_SIZE=$MAX_READS/$COLOR_BINS
 	PRIORITY=1
 	REF_BED=$SCRATCH_DIR"ref"-$HEAT_GENOME_BINSIZE"bp.bed"
+	BW_DIR=$GENOME_DIR$NAME"/"
+	mkdir $BW_DIR
 	
 	printf "track %s\ncontainer multiWig\nshortLabel %s\nlongLabel %s\ntype bigWig\nvisibility full\nmaxHeightPixels 100:60:25\nconfigurable on\nviewLimits 0:100\nalwaysZero on\naggregate solidOverlay\nshowSubtrackColorOnUi on\npriority 1.0\n\n" $NAME $NAME $NAME | tee -a $TRACKDB
 
@@ -273,7 +274,7 @@ function heatmap () {
 			CURR_BIN=$(basename $BG .bedgraph)
 			CURR_BIN=${CURR_BIN//$FILE-/}
 			BW_NAME=$(basename $BG .bedgraph).bw
-			BW=$GENOME_DIR$BW_NAME
+			BW=$BW_DIR$BW_NAME
 			if [[ -f $BG ]]; then
 				bedGraphToBigWig $BG $CHR_SIZES $BW
 				rm $BG
@@ -288,7 +289,7 @@ function heatmap () {
 				B=$(echo "scale=0;$B/1" | bc)
 				B=$(( 0 > $B ? 0 : $B ))
 				COLOR=$R","$G","$B
-				printf "\ttrack %s\n\tparent %s\n\tshortLabel %s\n\tlongLabel %s\n\ttype bigWig\n\tbigDataUrl %s\n\tcolor %s\n\tpriority %s\n\n" $BW_NAME $NAME $BW_NAME $BW_NAME $BW_NAME $COLOR $PRIORITY | tee -a $TRACKDB
+				printf "\ttrack %s\n\tparent %s\n\tshortLabel %s\n\tlongLabel %s\n\ttype bigWig\n\tbigDataUrl %s\n\tcolor %s\n\tpriority %s\n\n" $BW_NAME $NAME $BW_NAME $BW_NAME $NAME"/"$BW_NAME $COLOR $PRIORITY | tee -a $TRACKDB
 				((PRIORITY++))
 			fi
 		done
