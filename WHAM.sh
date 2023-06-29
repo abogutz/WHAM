@@ -328,7 +328,7 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 function makeTradPlots () {
 	samtools index $INPUT
 	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT
-	zcat $SCRATCH_DIR"*.bedGraph" > $TEMP1
+	zcat $SCRATCH_DIR$NAME".bedGraph.gz" > $TEMP1 # TODO get rid of header line?
 	bedGraphToBigWig $TEMP1 $CHR_SIZES $METHYL_OUTPUT
 	$BAMCOVERAGE --minMappingQuality $MAPQ -p $THREADS -b $INPUT -o $COVERAGE_OUTPUT
 	METHYL_NAME=$(basename $METHYL_OUTPUT)
