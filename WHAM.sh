@@ -52,7 +52,8 @@ PE_BAM=$SCRATCH_DIR"/temp.bam"
 THREADS=$SLURM_CPUS_PER_TASK
 CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.sizes"
 TRAD=0
-
+LOLLY=1
+HEATMAP=1
 
 ## Help Messages ##
 HELP="USAGE:\t $(basename $0) [OPTIONS] -h for help"
@@ -72,10 +73,12 @@ OPTIONS:\n\t
 -R\tTop end of teads for color in Heatmap. Default=$MAX_READS\n\t
 -c\tNumber of color bins for Heatmap. Default=$COLOR_BINS\n\t
 -z\tChromosome sizes file. Default= $CHR_SIZES\n\t
--p\tCreate traditional methylation and coverage tracks. Default=OFF"
+-p\tCreate traditional methylation and coverage tracks. Default=OFF\n\t
+-l\tDon't create lollipop tracks. Default=ON\n\t
+-m\tDon't create heatmap track. Default=ON"
 
 
-OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:dp"
+OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:dplm"
 
 function parseOptions () {
 	if ( ! getopts $OPTIONS opt); then
@@ -133,6 +136,12 @@ function parseOptions () {
 				;;
 			p) #make traditional plots
 				TRAD=1
+				;;
+			l) #Don't make lollipops
+				LOLLY=0
+				;;
+			m) #don't make heatmap
+				HEATMAP=0
 				;;
 			\?)
 				echo -e "\n###############\nERROR: Invalid Option! \nTry '$(basename $0) -h' for help.\n###############" >&2
@@ -212,7 +221,8 @@ function dipTest () {
 	Rscript $R_SCRIPT $TEMP2 $TEMP1 $THREADS
 	sed -i 's/\"//g' $TEMP1
 	echo "Generating bigwig..."
-	bedGraphToBigWig $TEMP1 $CHR_SIZES $DIPTEST_OUTPUT
+	sort -k1,1 -k2,2n $TEMP1 > $TEMP2
+	bedGraphToBigWig $TEMP2 $CHR_SIZES $DIPTEST_OUTPUT
 	rm $REF_BED $TEMP1 $TEMP2
 	DIPTEST_NAME=$(basename $DIPTEST_OUTPUT)
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 255,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME | tee -a $TRACKDB
@@ -277,7 +287,8 @@ function heatmap () {
 			BW_NAME=$(basename $BG .bedgraph).bw
 			BW=$BW_DIR$BW_NAME
 			if [[ -f $BG ]]; then
-				bedGraphToBigWig $BG $CHR_SIZES $BW
+				sort -k1,1 -k2,2n $BG > $TEMP1
+				bedGraphToBigWig $TEMP1 $CHR_SIZES $BW
 				rm $BG
 				R=$(echo "scale=5;255*(3-(3*$CURR_BIN/$MAX_READS))" | bc)
 				R=$(echo "scale=0;$R/1" | bc)
@@ -327,10 +338,12 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 
 function makeTradPlots () {
 	samtools index $INPUT
-	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT
-	zcat $SCRATCH_DIR$NAME".bedGraph.gz" > $TEMP1 # TODO get rid of header line?
-	bedGraphToBigWig $TEMP1 $CHR_SIZES $METHYL_OUTPUT
 	$BAMCOVERAGE --minMappingQuality $MAPQ -p $THREADS -b $INPUT -o $COVERAGE_OUTPUT
+	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT
+	zcat $SCRATCH_DIR$NAME".bedGraph.gz" > $TEMP1
+	tail -n +2 $TEMP1 > $TEMP2
+	sort -k1,1 -k2,2n $TEMP2 > $TEMP1
+	bedGraphToBigWig $TEMP1 $CHR_SIZES $METHYL_OUTPUT
 	METHYL_NAME=$(basename $METHYL_OUTPUT)
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $METHYL_NAME $METHYL_NAME $METHYL_NAME $METHYL_NAME | tee -a $TRACKDB
 	COVERAGE_NAME=$(basename $COVERAGE_OUTPUT)
@@ -346,8 +359,12 @@ if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
 	makeTradPlots
 fi
 parsePE
-makeLollies
-heatmap
+if [[ $LOLLY == 1 ]] ; then #Create Lollipops
+	makeLollies
+fi
+if [[ $HEATMAP == 1 ]] ; then #Create Heatmap
+	heatmap
+fi
 dipTest
 
 rm -r $SCRATCH_DIR
