@@ -75,10 +75,11 @@ OPTIONS:\n\t
 -z\tChromosome sizes file. Default= $CHR_SIZES\n\t
 -p\tCreate traditional methylation and coverage tracks. Default=OFF\n\t
 -l\tDon't create lollipop tracks. Default=ON\n\t
--m\tDon't create heatmap track. Default=ON"
+-m\tDon't create heatmap track. Default=ON\n\t
+-b\tReference Bed File. Will ONLY perform diptest."
 
 
-OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:dplm"
+OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:dplmb:"
 
 function parseOptions () {
 	if ( ! getopts $OPTIONS opt); then
@@ -143,6 +144,11 @@ function parseOptions () {
 			m) #don't make heatmap
 				HEATMAP=0
 				;;
+			b) #input bed file
+				REF_BED=${OPTARG}
+				HEATMAP=0
+				LOLLY=0
+				;;
 			\?)
 				echo -e "\n###############\nERROR: Invalid Option! \nTry '$(basename $0) -h' for help.\n###############" >&2
 				exit 1
@@ -205,10 +211,12 @@ function makeLollies () {
 
 function dipTest () {
 	echo "Starting Diptest Calculations"
-	REF_BED=$SCRATCH_DIR"/ref"-$DIPTEST_BINSIZE"bp.bed"
 	
 	echo "Making genomic windows..."
-	bedtools makewindows -w $DIPTEST_BINSIZE -b $GENOME_BED > $REF_BED
+	if [[ $REF_BED == "" ]] ; then
+		REF_BED=$SCRATCH_DIR"/ref"-$DIPTEST_BINSIZE"bp.bed"
+		bedtools makewindows -w $DIPTEST_BINSIZE -b $GENOME_BED > $REF_BED
+	fi
 
 	echo "Counting Bins..."
 	samtools view -q $MAPQ $INPUT | awk -f $DIP_AWK_SCRIPT -v thresh=$MIN_CPG > $TEMP1
