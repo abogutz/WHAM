@@ -231,7 +231,7 @@ function dipTest () {
 	echo "Generating bigwig..."
 	sort -k1,1 -k2,2n $TEMP1 > $TEMP2
 	bedGraphToBigWig $TEMP2 $CHR_SIZES $DIPTEST_OUTPUT
-	rm $REF_BED $TEMP1 $TEMP2
+	rm $TEMP1 $TEMP2
 	DIPTEST_NAME=$(basename $DIPTEST_OUTPUT)
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 255,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME | tee -a $TRACKDB
 }
@@ -331,8 +331,13 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 	fi
 	echo "Data are Paired-end:" $PAIRED
 	if [[ $PAIRED == true ]] ; then
+		if [[ $REF_BED != "" ]] ; then # If using a reference bed file, only keep reads within 1kb of regions
+			bedtools slop -i $REF_BED -g $CHR_SIZES -b 1000 > $TEMP1
+			samtools view -bh -q $MAPQ -L $TEMP1 $INPUT > $PE_BAM
+			INPUT=$PE_BAM
+		fi
 		echo "Sorting PE BAM by read name..."
-		samtools sort -@ $THREADS -m 3G -T $SCRATCH_DIR -n $INPUT > $TEMP1
+		samtools sort -@ $THREADS -m 3G -T $SCRATCH_DIR -n -o $TEMP1 $INPUT
 		echo "Combining Methylation for PE reads..."
 		samtools view -q $MAPQ $TEMP1 | awk -f $PE_PARSER > $TEMP2
 		samtools view -H $INPUT > $TEMP1
