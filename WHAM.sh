@@ -191,7 +191,7 @@ function initializeHub () {
 	printf "genome %s\ntrackDb %s/trackDb.txt" $GENOME $GENOME > $HUB/genomes.txt
 	
 	LOLLY_OUTPUT=$GENOME_DIR$NAME"_lolly.bb"
-	DIPTEST_OUTPUT=$GENOME_DIR$NAME"-"$GENOME_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
+	DIPTEST_OUTPUT=$GENOME_DIR$NAME"-"$DIPTEST_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
 	METHYL_OUTPUT=$GENOME_DIR$NAME"_methylation.bw"
 	COVERAGE_OUTPUT=$GENOME_DIR$NAME"_coverage.bw"
 }
@@ -213,9 +213,12 @@ function dipTest () {
 	echo "Starting Diptest Calculations"
 	
 	echo "Making genomic windows..."
-	if [[ $REF_BED == "" ]] ; then
+	if [[ $REF_BED == "" ]] ; then # If not using input bed, then bin genome
 		REF_BED=$SCRATCH_DIR"/ref"-$DIPTEST_BINSIZE"bp.bed"
 		bedtools makewindows -w $DIPTEST_BINSIZE -b $GENOME_BED > $REF_BED
+	else # Using input bed file
+		REF_BED_NAME=${REF_BED%%.*}
+		DIPTEST_OUTPUT=$GENOME_DIR$NAME"_"$REF_BED_NAME"-"$MIN_CPG"CpG-diptest.bw"
 	fi
 
 	echo "Counting Bins..."
