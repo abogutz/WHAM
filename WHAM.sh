@@ -312,7 +312,7 @@ function heatmap () {
 				B=$(echo "scale=0;$B/1" | bc)
 				B=$(( 0 > $B ? 0 : $B ))
 				COLOR=$R","$G","$B
-				printf "\ttrack %s\n\tparent %s\n\tshortLabel %s\n\tlongLabel %s\n\ttype bigWig\n\tbigDataUrl %s\n\tcolor %s\n\tpriority %s\n\n" $BW_NAME $NAME $BW_NAME $BW_NAME $NAME"/"$BW_NAME $COLOR $PRIORITY | tee -a $TRACKDB
+				printf "\ttrack %s\n\tparent %s\n\tshortLabel %s\n\tlongLabel %s\n\ttype bigWig\n\tbigDataUrl %s\n\tcolor %s\n\tpriority %s\n\n" $NAME"_"$BW_NAME $NAME $BW_NAME $BW_NAME $NAME"/"$BW_NAME $COLOR $PRIORITY | tee -a $TRACKDB
 				((PRIORITY++))
 			fi
 		done
