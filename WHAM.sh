@@ -250,7 +250,7 @@ function heatmap () {
 	printf "track %s\ncontainer multiWig\nshortLabel %s\nlongLabel %s\ntype bigWig\nvisibility full\nmaxHeightPixels 100:60:25\nconfigurable on\nviewLimits 0:100\nalwaysZero on\naggregate solidOverlay\nshowSubtrackColorOnUi on\npriority 1.0\n\n" $NAME $NAME $NAME | tee -a $TRACKDB
 
 	echo "Making genomic windows..."
-	bedtools makewindows -w $HEAT_GENOME_BINSIZE -b $GENOME_BED > $REF_BED
+	bedtools makewindows -w $HEAT_GENOME_BINSIZE -b $GENOME_BED | sort -k1,1 -k2,2n - > $REF_BED
 
 	echo "Counting Bins..." # First level of binning - put reads into methylation bins
 	samtools view -q $MAPQ $INPUT | awk -f $HEAT_AWK_SCRIPT -v bins=$METH_BINS -v thresh=$MIN_CPG # TODO should this be done in scratch?
