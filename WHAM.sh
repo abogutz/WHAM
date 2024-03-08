@@ -261,6 +261,10 @@ function heatmap () {
 		FILE="bin"$BIN
 		BEDGRAPH=$SCRATCH_DIR"/"$FILE".bedgraph"
 		
+		echo "Sorting..." # Just in case bam and ref are in different order
+		sort -k1,1 -k2,2n $FILE > $TEMP1
+		mv $TEMP1 $FILE
+		
 		echo "Mapping..." # Second binning - pileup reads in each genomic window
 		bedtools map -a $REF_BED -b $FILE -c 1 -o count > $BEDGRAPH
 		rm $FILE
