@@ -215,7 +215,7 @@ function dipTest () {
 	echo "Making genomic windows..."
 	if [[ $REF_BED == "" ]] ; then # If not using input bed, then bin genome
 		REF_BED=$SCRATCH_DIR"/ref"-$DIPTEST_BINSIZE"bp.bed"
-		bedtools makewindows -w $DIPTEST_BINSIZE -b $GENOME_BED > $REF_BED
+		bedtools makewindows -w $DIPTEST_BINSIZE -b $GENOME_BED | sort -k1,1 -k2,2n - > $REF_BED
 	else # Using input bed file
 		REF_BED_NAME=${REF_BED%%.*}
 		DIPTEST_OUTPUT=$GENOME_DIR$NAME"_"$REF_BED_NAME"-"$MIN_CPG"CpG-diptest.bw"
