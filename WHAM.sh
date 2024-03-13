@@ -222,7 +222,7 @@ function dipTest () {
 	fi
 
 	echo "Counting Bins..."
-	samtools view -q $MAPQ $INPUT | awk -f $DIP_AWK_SCRIPT -v thresh=$MIN_CPG > $TEMP1
+	samtools view -q $MAPQ $INPUT | sort -k1,1 -k2,2n - | awk -f $DIP_AWK_SCRIPT -v thresh=$MIN_CPG > $TEMP1
 
 	echo "Mapping..."
 	bedtools map -a $REF_BED -b $TEMP1 -c 4 -o collapse | awk 'OFS="\t"{if($4 != ".") {print $0}}' > $TEMP2
@@ -359,7 +359,7 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 function makeTradPlots () {
 	samtools index $INPUT
 	$BAMCOVERAGE --minMappingQuality $MAPQ --outFileFormat bigwig -p $THREADS -b $INPUT -o $COVERAGE_OUTPUT
-	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT
+	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT # TODO: PE needs to be sorted by name first
 	zcat $SCRATCH_DIR$NAME".bedGraph.gz" > $TEMP1
 	tail -n +2 $TEMP1 > $TEMP2
 	sort -k1,1 -k2,2n $TEMP2 > $TEMP1
@@ -387,5 +387,5 @@ if [[ $HEATMAP == 1 ]] ; then #Create Heatmap
 fi
 dipTest
 
-rm -r $SCRATCH_DIR
+#rm -r $SCRATCH_DIR
 
