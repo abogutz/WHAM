@@ -1,8 +1,8 @@
 #! /bin/bash
 #SBATCH --account=def-mlorincz           # required (format def-name)
-#SBATCH --cpus-per-task=10                        # number of cpus
+#SBATCH --cpus-per-task=20                        # number of cpus
 #SBATCH --mem-per-cpu=4G                 # memory; default unit is megabytes
-#SBATCH --time=01-12:00                   # time (DD-HH:MM)
+#SBATCH --time=00-12:00                   # time (DD-HH:MM)
 #SBATCH --mail-user=aaron.bogutz@ubc.ca
 #SBATCH --mail-type=ALL
 
@@ -48,6 +48,9 @@ COLOR_BINS=5
 SCRATCH_DIR="./"
 TEMP1=$SCRATCH_DIR"/temp"
 TEMP2=$SCRATCH_DIR"/temp2"
+TEMP3=$SCRATCH_DIR"/temp3"
+TEMP4=$SCRATCH_DIR"/temp4"
+TEMP5=$SCRATCH_DIR"/temp5"
 PE_BAM=$SCRATCH_DIR"/temp.bam"
 THREADS=$SLURM_CPUS_PER_TASK
 CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.sizes"
@@ -223,18 +226,19 @@ function dipTest () {
 
 	echo "Counting Bins..."
 	samtools view -q $MAPQ $INPUT | sort -k1,1 -k2,2n - | awk -f $DIP_AWK_SCRIPT -v thresh=$MIN_CPG > $TEMP1
+	sort -k1,1 -k2,2n $TEMP1 > $TEMP2
 
 	echo "Mapping..."
-	bedtools map -a $REF_BED -b $TEMP1 -c 4 -o collapse | awk 'OFS="\t"{if($4 != ".") {print $0}}' > $TEMP2
+	bedtools map -a $REF_BED -b $TEMP2 -c 4 -o collapse | awk 'OFS="\t"{if($4 != ".") {print $0}}' > $TEMP3
 
 	# R CODE STUFF
 	echo "Calculating Dip p-values..."
-	Rscript $R_SCRIPT $TEMP2 $TEMP1 $THREADS
-	sed -i 's/\"//g' $TEMP1
+	Rscript $R_SCRIPT $TEMP3 $TEMP4 $THREADS
+	sed -i 's/\"//g' $TEMP4
 	echo "Generating bigwig..."
-	sort -k1,1 -k2,2n $TEMP1 > $TEMP2
-	bedGraphToBigWig $TEMP2 $CHR_SIZES $DIPTEST_OUTPUT
-	rm $TEMP1 $TEMP2
+	sort -k1,1 -k2,2n $TEMP4 > $TEMP5
+	bedGraphToBigWig $TEMP5 $CHR_SIZES $DIPTEST_OUTPUT
+#	rm $TEMP1 $TEMP2 $TEMP3 $TEMP4 $TEMP5
 	DIPTEST_NAME=$(basename $DIPTEST_OUTPUT)
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 255,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME | tee -a $TRACKDB
 }
