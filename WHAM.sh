@@ -241,7 +241,7 @@ function dipTest () {
 	echo "Generating bigwig..."
 	sort -k1,1 -k2,2n $TEMP4 > $TEMP5
 	bedGraphToBigWig $TEMP5 $CHR_SIZES $DIPTEST_OUTPUT
-#	rm $TEMP1 $TEMP2 $TEMP3 $TEMP4 $TEMP5
+	rm $TEMP1 $TEMP2 $TEMP3 $TEMP4 $TEMP5
 	DIPTEST_NAME=$(basename $DIPTEST_OUTPUT)
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 255,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME | tee -a $TRACKDB
 }
@@ -394,5 +394,5 @@ if [[ $HEATMAP == 1 ]] ; then #Create Heatmap
 fi
 dipTest
 
-#rm -r $SCRATCH_DIR
+rm -r $SCRATCH_DIR
 
