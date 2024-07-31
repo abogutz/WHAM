@@ -226,6 +226,7 @@ function dipTest () {
 	else # Using input bed file
 		REF_BED_NAME=${REF_BED%%.*}
 		DIPTEST_OUTPUT=$GENOME_DIR$NAME"_"$REF_BED_NAME"-"$MIN_CPG"CpG-diptest.bw"
+		echo $DIPTEST_OUTPUT
 	fi
 
 	echo "Counting Bins..."
