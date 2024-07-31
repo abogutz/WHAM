@@ -239,7 +239,7 @@ function dipTest () {
 	echo "Calculating Dip p-values..."
 	Rscript $R_SCRIPT $TEMP3 $TEMP4 $THREADS
 	sed -i 's/\"//g' $TEMP4
-	echo "Generating bigwig..."
+	echo "Generating bigwig"$DIPTEST_OUTPUT
 	sort -k1,1 -k2,2n $TEMP4 > $TEMP5
 	bedGraphToBigWig $TEMP5 $CHR_SIZES $DIPTEST_OUTPUT
 	rm $TEMP1 $TEMP2 $TEMP3 $TEMP4 $TEMP5
