@@ -379,8 +379,8 @@ function makeTradPlots () {
 }
 
 ## Actually Run Stuff ##
-loadModules
 parseOptions $@
+loadModules
 makeBounds
 initializeHub
 if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
