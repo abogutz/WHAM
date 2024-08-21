@@ -67,14 +67,14 @@ OPTIONS:\n\t
 -h\tPrints help page.\n\t
 -d\tCheck dependencies and exit.\n\t
 -i\tInput file. Must be a Bismark aligned .bam file. REQUIRED\n\t
--s\tScratch directory. Default=./\n\t
+-s\tScratch directory. Default=$SCRATCH_DIR\n\t
 -t\tNumber of threads to use. Default=SLURM_THREADS\n\t
 -q\tMinimum mapping quality for reads. Default=$MAPQ\n\t
 -C\tMinimum CpGs for reads. Default=$MIN_CPG\n\t
 -D\tGenome bin size for Diptest. Default=$DIPTEST_BINSIZE\n\t
--H\tGenome bin size for Heatmp. Default=$HEAT_GENOME_BINSIZE\n\t
+-H\tGenome bin size for Heatmap. Default=$HEAT_GENOME_BINSIZE\n\t
 -B\tNumber of methylation bins for Heatmap. Default=$METH_BINS\n\t
--R\tTop end of teads for color in Heatmap. Default=$MAX_READS\n\t
+-R\tMaximum of reads for color in Heatmap. Default=$MAX_READS\n\t
 -c\tNumber of color bins for Heatmap. Default=$COLOR_BINS\n\t
 -z\tChromosome sizes file. Default= $CHR_SIZES\n\t
 -p\tCreate traditional methylation and coverage tracks. Default=OFF\n\t
