@@ -99,6 +99,7 @@ function parseOptions () {
 				;;
 			i) #set input file
 				INPUT=${OPTARG}
+				ORIGINAL=$INPUT
 				NAME=$(basename $INPUT .bam)
 				;;
 			q) #minimum MapQ
@@ -230,7 +231,7 @@ function dipTest () {
 	fi
 
 	echo "Counting Bins..."
-	samtools view -q $MAPQ $INPUT | sort -k1,1 -k2,2n - | awk -f $DIP_AWK_SCRIPT -v thresh=$MIN_CPG > $TEMP1
+	samtools view -q $MAPQ $INPUT |  awk -f $DIP_AWK_SCRIPT -v thresh=$MIN_CPG > $TEMP1
 	sort -k1,1 -k2,2n $TEMP1 > $TEMP2
 
 	echo "Mapping..."
@@ -367,8 +368,8 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 
 function makeTradPlots () {
 	samtools index $INPUT
-	$BAMCOVERAGE --minMappingQuality $MAPQ --outFileFormat bigwig -p $THREADS -b $INPUT -o $COVERAGE_OUTPUT
-	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT # TODO: PE needs to be sorted by name first
+	$BAMCOVERAGE --minMappingQuality $MAPQ --outFileFormat bigwig -p $THREADS -b $ORIGINAL -o $COVERAGE_OUTPUT
+	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT
 	zcat $SCRATCH_DIR$NAME".bedGraph.gz" > $TEMP1
 	tail -n +2 $TEMP1 > $TEMP2
 	sort -k1,1 -k2,2n $TEMP2 > $TEMP1
@@ -384,10 +385,10 @@ parseOptions $@
 loadModules
 makeBounds
 initializeHub
+parsePE
 if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
 	makeTradPlots
 fi
-parsePE
 if [[ $LOLLY == 1 ]] ; then #Create Lollipops
 	makeLollies
 fi
