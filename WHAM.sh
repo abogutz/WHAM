@@ -140,6 +140,7 @@ function parseOptions () {
 				CHR_SIZES=${OPTARG}
 				;;
 			d) #check Dependencies
+				loadModules
 				checkDependencies
 				exit 0;
 				;;
