@@ -58,6 +58,7 @@ CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.sizes"
 TRAD=0
 LOLLY=1
 HEATMAP=1
+DIPTEST=1
 
 ## Help Messages ##
 HELP="USAGE:\t $(basename $0) [OPTIONS] -h for help"
@@ -71,7 +72,7 @@ OPTIONS:\n\t
 -t\tNumber of threads to use. Default=SLURM_THREADS\n\t
 -q\tMinimum mapping quality for reads. Default=$MAPQ\n\t
 -C\tMinimum CpGs for reads. Default=$MIN_CPG\n\t
--D\tGenome bin size for Diptest. Default=$DIPTEST_BINSIZE\n\t
+-G\tGenome bin size for Diptest. Default=$DIPTEST_BINSIZE\n\t
 -H\tGenome bin size for Heatmap. Default=$HEAT_GENOME_BINSIZE\n\t
 -B\tNumber of methylation bins for Heatmap. Default=$METH_BINS\n\t
 -R\tMaximum of reads for color in Heatmap. Default=$MAX_READS\n\t
@@ -80,7 +81,8 @@ OPTIONS:\n\t
 -p\tCreate traditional methylation and coverage tracks. Default=OFF\n\t
 -l\tDon't create lollipop tracks. Default=ON\n\t
 -m\tDon't create heatmap track. Default=ON\n\t
--b\tReference Bed File. Will ONLY perform diptest."
+-b\tReference Bed File. Will ONLY perform diptest.\n\t
+-D\tDon't create diptest track. Default=ON"
 
 
 OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:dplmb:"
@@ -108,7 +110,7 @@ function parseOptions () {
 			C) #minimum CpGs in read
 				MIN_CPG=${OPTARG}
 				;;
-			D) #binsize for Diptest
+			G) #binsize for Diptest
 				DIPTEST_BINSIZE=${OPTARG}
 				;;
 			H) #binsize for heatmap
@@ -157,6 +159,9 @@ function parseOptions () {
 				REF_BED=${OPTARG}
 				HEATMAP=0
 				LOLLY=0
+				;;
+			D) #don't do diptest
+				DIPTEST=0
 				;;
 			\?)
 				echo -e "\n###############\nERROR: Invalid Option! \nTry '$(basename $0) -h' for help.\n###############" >&2
@@ -396,7 +401,9 @@ fi
 if [[ $HEATMAP == 1 ]] ; then #Create Heatmap
 	heatmap
 fi
-dipTest
+if [[ $DIPTEST == 1 ]] ; then #Create Heatmap
+	dipTest
+fi
 
 rm -r $SCRATCH_DIR
 
