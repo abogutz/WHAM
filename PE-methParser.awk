@@ -18,7 +18,7 @@ BEGIN{
 	if(read1 == 1) { # First read
 		if(XM == 0) { # Locate XM string
 			for(x=12; x<20; x++) {
-				if($x ~ ^"XM:Z:") {
+				if($x ~ /^XM:Z:/) {
 					XM=x;
 					break;
 				}
@@ -28,11 +28,11 @@ BEGIN{
 				exit 1;
 			}
 		}
-		if(substr($16, 6) ~ /[zZ]/) { # Mine XM tag
+		if(substr($XM, 6) ~ /[zZ]/) { # Mine XM tag
 			storeValues();
 		}
 	} else { # Second Read
-		if(substr($16, 6) !~ /[zZ]/) { # Mine XM tag
+		if(substr($XM, 6) !~ /[zZ]/) { # Mine XM tag
 			print prevRead;
 			read1=1;
 		} else {
@@ -40,7 +40,7 @@ BEGIN{
 				print prevRead;
 				storeValues();
 			} else {
-				methCalls2=substr($16, 6);
+				methCalls2=substr($XM, 6);
 				if($4 < r1start) { # R2 precedes R1
 					if($4+length(methCalls2) > r1start) { # R2 terminates inside R1
 						methCalls2=substr(methCalls2,1,r1start-$4)
@@ -77,7 +77,7 @@ BEGIN{
 				}
 				$3=r1chr;
 				$4=r1start;
-				$16="XM:Z:"methCalls;
+				$XM="XM:Z:"methCalls;
 				print $0;
 				read1=1;
 			}
@@ -89,7 +89,7 @@ function storeValues () {
 	name=$1;
 	r1chr=$3;
 	r1start=$4;
-	methCalls=substr($16, 6); # Remove leading characters in meth calls - which should always be in column 16
+	methCalls=substr($XM, 6); # Remove leading characters in meth calls - which should always be in column 16. Except they aren't always.
 	r1end=r1start+length(methCalls);
 	read1=0;
 	prevRead=$0;
