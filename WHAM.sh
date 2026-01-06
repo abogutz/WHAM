@@ -391,10 +391,10 @@ parseOptions $@
 loadModules
 makeBounds
 initializeHub
-parsePE
 if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
 	makeTradPlots
 fi
+parsePE
 if [[ $LOLLY == 1 ]] ; then #Create Lollipops
 	makeLollies
 fi

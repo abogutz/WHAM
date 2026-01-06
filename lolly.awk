@@ -11,6 +11,7 @@ BEGIN {
 	green="0,255,0";
 	red="255,0,0"
 	grey="150,150,150";
+	XM=0;
 	if( ! size ) { size=2; } # Default size value - less than 2 is somewhat unreadable
 	if( ! capSize ) { capSize=2; } # Size for start and end flags
 	if( ! minDist ) { minDist=20; } # Arbitrary distance between reads on same "strand"
@@ -20,13 +21,25 @@ BEGIN {
 	while ( $3 !~ /chr[0-9XY]*$/ && done>0 ) { # Ignore non-canonical chr
 		done=getline;
 	}
+	if(XM == 0) { # Locate XM string
+		for(x=12; x<20; x++) { #Locate XM Tag
+			if($x ~ /^XM:Z:/) {
+				XM=x;
+				break;
+			}
+		}
+		if (XM == 0) {
+			print "Failed to locate Tag" > "/dev/stderr";
+			exit 1;
+		}
+	}
 	if ( $3 != chr ) { # New chromosome - reset strand count
 		chr=$3;
 		for(x=1; x<1000; x++) {
 			end[x]=0;
 		}
 	}
-	methCalls=substr($16, 6) # Remove leading characters in meth calls - which should always be in column 16
+	methCalls=substr($XM, 6) # Remove leading characters in meth calls - which should always be in column 16
 	calls=split(methCalls, len, /[zZ]/, meth); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
 	if ( calls > 1 ) {
 		start=$4;
