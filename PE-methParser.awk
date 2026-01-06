@@ -9,17 +9,30 @@ BEGIN{
 	chr="";
 	done=1;
 	read1=1;
+	XM=0;
 	if( ! maxGap ) { maxGap=400; } # Treat reads with larger distances between as separate
 }{
 	while ( $3 !~ /chr[0-9XY]*$/ && done>0 ) { # Ignore non-canonical chr
 		done=getline;
 	}
 	if(read1 == 1) { # First read
-		if(substr($16, 6) ~ /[zZ]/) {
+		if(XM == 0) { # Locate XM string
+			for(x=12; x<20; x++) {
+				if($x ~ ^"XM:Z:") {
+					XM=x;
+					break;
+				}
+			}
+			if (XM == 0) {
+				print "Failed to locate Tag" > "/dev/stderr";
+				exit 1;
+			}
+		}
+		if(substr($16, 6) ~ /[zZ]/) { # Mine XM tag
 			storeValues();
 		}
 	} else { # Second Read
-		if(substr($16, 6) !~ /[zZ]/) {
+		if(substr($16, 6) !~ /[zZ]/) { # Mine XM tag
 			print prevRead;
 			read1=1;
 		} else {

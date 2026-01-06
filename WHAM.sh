@@ -362,7 +362,7 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 		echo "Sorting PE BAM by read name..."
 		samtools sort -@ $THREADS -m 3G -T $SCRATCH_DIR -n -o $TEMP1 $INPUT
 		echo "Combining Methylation for PE reads..."
-		samtools view -q $MAPQ $TEMP1 | awk -f $PE_PARSER > $TEMP2
+		samtools view -q $MAPQ $TEMP1 | awk -f $PE_PARSER > $TEMP2 # TODO implement error handling if PE_PARSER fails
 		samtools view -H $INPUT > $TEMP1
 		echo "Compressing PE Data..."
 		cat $TEMP1 $TEMP2 | samtools view -@ $THREADS -bh -o $TEMP1
