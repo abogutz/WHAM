@@ -2,7 +2,7 @@
 
 # Helper script to convert Bismark BAM files into bigLolly files for UCSC
 # Made by Aaron
-# Last Updated 2023-06-21
+# Last Updated 2026-01-06
 
 BEGIN{
 	OFS="\t";

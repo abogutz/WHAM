@@ -2,7 +2,7 @@
 
 # Helper script to convert Bismark BAM files into bigLolly files for UCSC
 # Made by Aaron
-# Last Updated 2023-05-10
+# Last Updated 2026-01-06
 
 BEGIN {
 	OFS="\t";
@@ -39,7 +39,7 @@ BEGIN {
 			end[x]=0;
 		}
 	}
-	methCalls=substr($XM, 6) # Remove leading characters in meth calls - which should always be in column 16
+	methCalls=substr($XM, 6) # Remove leading characters in meth calls - which should always be in column 16 (BUT IT ISNT)
 	calls=split(methCalls, len, /[zZ]/, meth); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
 	if ( calls > 1 ) {
 		start=$4;

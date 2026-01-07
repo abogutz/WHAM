@@ -7,12 +7,25 @@
 BEGIN{
 	OFS="\t";
 	done=1;
+	XM=0;
 	if( ! thresh ) { thresh=0; }
 }{
 	while ( $3 !~ /chr[0-9XY]*$/ && done>0 ) { # Ignore non-canonical chr
 		done=getline;
 	}
-	methCalls=substr($16, 6) # Get rid of leading characters
+	if(XM == 0) { # Locate XM string
+		for(x=12; x<20; x++) { #Locate XM Tag
+			if($x ~ /^XM:Z:/) {
+				XM=x;
+				break;
+			}
+		}
+		if (XM == 0) {
+			print "Failed to locate Tag" > "/dev/stderr";
+			exit 1;
+		}
+	}
+	methCalls=substr($XM, 6) # Get rid of leading characters
 	calls=split(methCalls, len, /[zZ]/, meth); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
 	if ( calls > thresh && done > 0 ) {
 		start=$4;

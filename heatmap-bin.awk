@@ -2,7 +2,7 @@
 
 # Helper script to convert Bismark BAM files methlated strand line graphs
 # Made by Aaron
-# Last Updated 2023-05-29
+# Last Updated 2026-01-06
 
 BEGIN{
 	OFS="\t";
