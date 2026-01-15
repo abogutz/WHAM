@@ -1,8 +1,8 @@
 #! /bin/awk
 
-# Helper script to convert Bismark BAM files methlated strand line graphs
+# Helper script to convert Bismark BAM files methylated strand line graphs
 # Made by Aaron
-# Last Updated 2023-05-29
+# Last Updated 2026-01-07
 
 BEGIN{
 	OFS="\t";
