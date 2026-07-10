@@ -12,8 +12,7 @@ three analyses:
 
 ## Installation
 
-WHAM was originally developed on a Compute Canada (SLURM) cluster, but it now
-runs anywhere via conda. Install all dependencies into an isolated environment:
+Install all dependencies into an isolated environment using conda:
 
 ```bash
 git clone <this-repo-url> WHAM
@@ -23,8 +22,8 @@ conda activate wham
 ```
 
 > **Apple Silicon (osx-arm64):** some UCSC tools (`ucsc-*`) are only built for
-> `osx-64` on bioconda. If the solver cannot find them, create the env under the
-> `osx-64` subdir (runs via Rosetta 2):
+> `osx-64` on bioconda. If conda cannot find them, create the env under the
+> `osx-64` subdir (runs via Rosetta 2) using this trick:
 > ```bash
 > CONDA_SUBDIR=osx-64 conda env create -f environment.yml
 > ```
@@ -53,7 +52,7 @@ Verify everything is available:
 The input must be a **Bismark-aligned** BAM (reads carry `XM:Z:` methylation and
 `XG:Z:` genome-strand tags). Both single-end and paired-end data are supported;
 paired mates are automatically combined. Output is written to
-`<output_dir>/Track_Hub/`, ready to load at UCSC.
+`<output_dir>/Track_Hub/`, ready to load at in the UCSC Genome Browser (Track Hubs).
 
 ### Example
 
@@ -84,11 +83,3 @@ paired mates are automatically combined. Output is written to
 | `-b` | Reference BED file (runs ONLY diptest over these regions) | |
 | `-d` | Check dependencies and exit | |
 | `-h` | Full help | |
-
-## Running on an HPC (Compute Canada / SLURM)
-
-The script still works unchanged on a cluster: when the SLURM environment
-variables (`$SLURM_JOB_ID`, `$SCRATCH`, `$SLURM_CPUS_PER_TASK`) and an
-environment-`module` system are present, they are used automatically.
-`ComputeCanada.config` lists the modules loaded via `loadModules`; edit it to
-match your cluster's module names. Off-cluster it is a harmless no-op.
