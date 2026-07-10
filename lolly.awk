@@ -2,16 +2,17 @@
 
 # Helper script to convert Bismark BAM files into bigLolly files for UCSC
 # Made by Aaron
-# Last Updated 2026-01-06
+# Last Updated 2026-07-07 using Marlet's lolly variant (light-blue caps and per-bp markers)
 
 BEGIN {
 	OFS="\t";
 	black="0,0,0";
 	white="255,255,255";
-	green="0,255,0";
-	red="255,0,0"
+	start_col="210,230,255"; # light-blue start cap
+	end_col="210,230,255"; # light-blue end cap
 	grey="150,150,150";
 	XM=0;
+	XG=0;
 	if( ! size ) { size=2; } # Default size value - less than 2 is somewhat unreadable
 	if( ! capSize ) { capSize=2; } # Size for start and end flags
 	if( ! minDist ) { minDist=20; } # Arbitrary distance between reads on same "strand"
@@ -33,6 +34,18 @@ BEGIN {
 			exit 1;
 		}
 	}
+	if(XG == 0) { 
+		for(x=12; x<20; x++) {
+			if($x ~ /^XG:Z:/) {
+				XG=x;
+				break;
+			}
+		}
+		if (XG == 0) {
+			print "Failed to locate XG Tag" > "/dev/stderr";
+			exit 1;
+		}
+	}
 	if ( $3 != chr ) { # New chromosome - reset strand count
 		chr=$3;
 		for(x=1; x<1000; x++) {
@@ -49,8 +62,18 @@ BEGIN {
 			}
 		}
 		if(strand < 1000 ) {
-			print chr, start-1, start, "start", strand, ".", 0, 0, green, capSize; # print start in green
+			# Offset start by the genome strand the read aligned to (Marlet)
+			if($XG == "XG:Z:CT") {
+				start=$4;
+			} else { # XG:Z:GA
+				start=$4-1;
+			}
+			print chr, start-2, start-1, "start", strand, ".", 0, 0, start_col, capSize; # light-blue start cap
 			for ( x=1 ; x<calls ; x++ ) {
+				num_bp=length(len[x]); # per-bp markers across the inter-CpG interval (Marlet)
+				for ( i=1 ; i<num_bp ; i+=3 ) {
+					print chr, start+i-1, start+i, "bp", strand, ".", 0, 0, grey, 0;
+				}
 				start+=length(len[x]);
 				if ( meth[x] == "z" ) { # unmethylated
 					colour = white;
@@ -60,9 +83,13 @@ BEGIN {
 				print chr, start-1, start, meth[x], strand, ".", 0, 0, colour, size;
 				start++; # Increment over Cytosine
 			}
+			num_bp=length(len[x]); # per-bp markers for the final interval (Marlet)
+			for ( i=1 ; i<num_bp ; i+=3 ) {
+				print chr, start+i-1, start+i, "bp", strand, ".", 0, 0, grey, 0;
+			}
 			start+=length(len[x]); # Add final interval
 			end[strand]=start;
-			print chr, start-1, start, "end", strand, ".", 0, 0, red, capSize; # print end in red
+			print chr, start, start+1, "end", strand, ".", 0, 0, end_col, capSize; # light-blue end cap
 			gap=match(methCalls, /\++/);
 			if(gap != 0) {
 				for(start=0; start<RLENGTH; start+=gapStep) {

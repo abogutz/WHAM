@@ -1,6 +1,8 @@
 #! /bin/awk
 
-# Helper script to convert Bismark BAM files methlated strand line graphs
+# Helper script to convert Bismark BAM files to heatmap bigwigs of methylation levels.
+# By default, outputs bigwigs with ranges 0-20,20-40,40-60,60-80,80-100 % 5mC.
+# This allows users to visualise the distribution of per-read methylation levels, including regions with bimodal (0-20 and 80-100) methylation levels.
 # Made by Aaron
 # Last Updated 2026-01-06
 
