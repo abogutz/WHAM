@@ -1,0 +1,5 @@
+hub <HubNameWithoutSpace>
+shortLabel <max 17 char, display on side>
+longLabel Hub to display <fill> data at UCSC
+genomesFile genomes.txt
+email <email-optional>

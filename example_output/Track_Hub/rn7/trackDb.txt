@@ -1,0 +1,262 @@
+track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_methylation.bw
+shortLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_methylation.bw
+longLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_methylation.bw
+type bigWig
+bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_methylation.bw
+color 0,0,0
+visibility full
+maxHeightPixels 100:60:25
+autoScale on
+alwaysZero on
+yLineOnOff on
+yLineMark 1.3
+
+track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_coverage.bw
+shortLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_coverage.bw
+longLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_coverage.bw
+type bigWig
+bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_coverage.bw
+color 0,0,0
+visibility full
+maxHeightPixels 100:60:25
+autoScale on
+alwaysZero on
+yLineOnOff on
+yLineMark 1.3
+
+track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_lolly.bb
+shortLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_lolly.bb
+longLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_lolly.bb
+type bigLolly
+bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_lolly.bb
+visibility full
+autoScale on
+lollyNoStems on
+lollySizeField 10
+maxWindowToDraw 20000
+
+track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+container multiWig
+shortLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+longLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+type bigWig
+visibility full
+maxHeightPixels 100:60:25
+configurable on
+viewLimits 0:100
+alwaysZero on
+aggregate solidOverlay
+showSubtrackColorOnUi on
+priority 1.0
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin100-0.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin100-0.bw
+	longLabel bin100-0.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin100-0.bw
+	color 255,255,255
+	priority 1
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin100-10.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin100-10.bw
+	longLabel bin100-10.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin100-10.bw
+	color 0,0,0
+	priority 2
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin100-2.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin100-2.bw
+	longLabel bin100-2.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin100-2.bw
+	color 255,255,102
+	priority 3
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin100-4.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin100-4.bw
+	longLabel bin100-4.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin100-4.bw
+	color 255,204,0
+	priority 4
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin100-6.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin100-6.bw
+	longLabel bin100-6.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin100-6.bw
+	color 255,51,0
+	priority 5
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin100-8.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin100-8.bw
+	longLabel bin100-8.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin100-8.bw
+	color 153,0,0
+	priority 6
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin80-0.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin80-0.bw
+	longLabel bin80-0.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin80-0.bw
+	color 255,255,255
+	priority 7
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin80-2.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin80-2.bw
+	longLabel bin80-2.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin80-2.bw
+	color 255,255,102
+	priority 8
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin80-4.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin80-4.bw
+	longLabel bin80-4.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin80-4.bw
+	color 255,204,0
+	priority 9
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin80-6.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin80-6.bw
+	longLabel bin80-6.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin80-6.bw
+	color 255,51,0
+	priority 10
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin60-0.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin60-0.bw
+	longLabel bin60-0.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin60-0.bw
+	color 255,255,255
+	priority 11
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin60-2.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin60-2.bw
+	longLabel bin60-2.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin60-2.bw
+	color 255,255,102
+	priority 12
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin60-4.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin60-4.bw
+	longLabel bin60-4.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin60-4.bw
+	color 255,204,0
+	priority 13
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin40-0.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin40-0.bw
+	longLabel bin40-0.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin40-0.bw
+	color 255,255,255
+	priority 14
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin40-2.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin40-2.bw
+	longLabel bin40-2.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin40-2.bw
+	color 255,255,102
+	priority 15
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin40-4.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin40-4.bw
+	longLabel bin40-4.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin40-4.bw
+	color 255,204,0
+	priority 16
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin20-0.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin20-0.bw
+	longLabel bin20-0.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin20-0.bw
+	color 255,255,255
+	priority 17
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin20-2.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin20-2.bw
+	longLabel bin20-2.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin20-2.bw
+	color 255,255,102
+	priority 18
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin20-4.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin20-4.bw
+	longLabel bin20-4.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin20-4.bw
+	color 255,204,0
+	priority 19
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin20-6.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin20-6.bw
+	longLabel bin20-6.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin20-6.bw
+	color 255,51,0
+	priority 20
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin20-8.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin20-8.bw
+	longLabel bin20-8.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin20-8.bw
+	color 153,0,0
+	priority 21
+
+	track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078_bin0-0.bw
+	parent Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078
+	shortLabel bin0-0.bw
+	longLabel bin0-0.bw
+	type bigWig
+	bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078/bin0-0.bw
+	color 255,255,255
+	priority 22
+
+track Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078-100bp4CpG-diptest.bw
+shortLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078-100bp4CpG-diptest.bw
+longLabel Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078-100bp4CpG-diptest.bw
+type bigWig
+bigDataUrl Rat_BNxWKY_Epiblast_rep3_chr4_59307289-59412078-100bp4CpG-diptest.bw
+color 255,0,0
+visibility full
+maxHeightPixels 100:60:25
+autoScale on
+alwaysZero on
+yLineOnOff on
+yLineMark 1.3
+
