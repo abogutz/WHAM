@@ -1,6 +1,6 @@
 #! /bin/awk
 
-# Helper script to convert Bismark BAM files methylated strand line graphs
+# Helper script to convert Bismark BAM files into Diptest-friendly stream
 # Made by Aaron
 # Last Updated 2026-01-07
 

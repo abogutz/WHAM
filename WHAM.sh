@@ -1,10 +1,11 @@
 #! /bin/bash
-#SBATCH --account=def-mlorincz           # required (format def-name)
-#SBATCH --cpus-per-task=20                        # number of cpus
-#SBATCH --mem-per-cpu=4G                 # memory; default unit is megabytes
-#SBATCH --time=00-12:00                   # time (DD-HH:MM)
-#SBATCH --mail-user=aaron.bogutz@ubc.ca
-#SBATCH --mail-type=ALL
+#SBATCH --account=def-labname         	# required (format def-name)
+#SBATCH --cpus-per-task=20				# cpus per task
+#SBATCH --mem-per-cpu=3G               	# memory per cpu in megabytes
+#SBATCH --time=00-12:00					# time (DD-HH:MM)
+#SBATCH --mail-user=email@mail.ca		# email address for notifications
+#SBATCH --mail-type=ALL					# email notifications for all job events
+# These are all optional and can be removed if not needed, especially if not on a HPC.
 
 #  _       ____  _____    __  _____
 # | |     / / / / /   |  /  |/  / /
@@ -21,8 +22,9 @@
 # Within R: requires diptest, foreach, and doParallel
 # If creating traditional plots, additionally requires bismark and Deeptools bamCoverage
 
-## Scripts Locations - CHANGE TO ACTUAL LOCATION ##
-SCRIPTS_DIR="/project/def-mlorincz/scripts/misc/WHAM/"
+
+# Auto-detect the directory this script lives in so the helper scripts are found
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/"
 
 PE_PARSER=$SCRIPTS_DIR"PE-methParser.awk"
 LOLLY_SCRIPT=$SCRIPTS_DIR"lolly.awk"
@@ -30,14 +32,21 @@ DIP_AWK_SCRIPT=$SCRIPTS_DIR"diptest-bin.awk"
 HEAT_AWK_SCRIPT=$SCRIPTS_DIR"heatmap-bin.awk"
 BIGLOLLY_AS=$SCRIPTS_DIR"bigLolly-size.as"
 R_SCRIPT=$SCRIPTS_DIR"DipTest.R"
+BAMCOVERAGE="bamCoverage"
+
+# The config only provides loadModules for HPC module systems. Optional
+# on a conda/local install the tools are already on PATH.
 CONFIG=$SCRIPTS_DIR"ComputeCanada.config"
-source $CONFIG
+if [[ -f "$CONFIG" ]] ; then
+	source "$CONFIG"
+fi
+if ! declare -f loadModules > /dev/null ; then
+	function loadModules { : ; }
+fi
 
-BAMCOVERAGE="/project/def-mlorincz/scripts/utilities/miniconda3/bin/bamCoverage"
 
 
-
-## Default Values ##
+### Default Values ###
 MAPQ=40
 MIN_CPG=4
 DIPTEST_BINSIZE=100
@@ -45,22 +54,34 @@ HEAT_GENOME_BINSIZE=25
 METH_BINS=5
 MAX_READS=10
 COLOR_BINS=5
-SCRATCH_DIR=$SCRATCH"/"$SLURM_JOB_ID"/"
-mkdir $SCRATCH_DIR
-TEMP1=$SCRATCH_DIR"/temp"
-TEMP2=$SCRATCH_DIR"/temp2"
-TEMP3=$SCRATCH_DIR"/temp3"
-TEMP4=$SCRATCH_DIR"/temp4"
-TEMP5=$SCRATCH_DIR"/temp5"
-PE_BAM=$SCRATCH_DIR"/temp.bam"
-THREADS=$SLURM_CPUS_PER_TASK
+
+# Scratch: default is a dedicated folder beside the input BAM. 
+# Alternatively it can be set with -s .
+# It is deleted at the end of the run.
+SCRATCH_DIR=""
+
+# Specify number of threads.
+if [[ -n $SLURM_CPUS_PER_TASK ]] ; then
+	# Threads = SLURM allocation on HPC, otherwise detect available cores.
+	THREADS=$SLURM_CPUS_PER_TASK
+else
+    # If not on HPC, detect available cores. Set 4 minimum.
+	THREADS=$( { command -v nproc > /dev/null && nproc; } || sysctl -n hw.ncpu 2> /dev/null || echo 4 )
+fi
+
+# Set with -M, otherwise it is computed in computeSortMem.
+SORT_MEM_MB=""
+
+# Default chromosome sizes file. Can be set with -z.
 CHR_SIZES="/project/def-mlorincz/reference_genomes/mm10/mm10.sizes"
+# In our experience we already have trad plots (methyl/coverage) so set to 0 by default.
 TRAD=0
 LOLLY=1
 HEATMAP=1
 DIPTEST=1
+OUTDIR="."
 
-## Help Messages ##
+### Help Messages ###
 HELP="USAGE:\t $(basename $0) [OPTIONS] -h for help"
 HELP_FULL="\n$HELP\n
 \nThis set of scripts will perform 3 analyses of Bismark-aligned data:\n\t1: Lollipop visualization of by-read methylation calls\n\t2: Heatmap of read-level methylation distribution\n\t3: Modality test for non-unimodal distribution\nRequires samtools, bedtools, bedToBigBed, bedGraphToBigWig, R.\nWithin R: requires diptest, foreach, and doParallel\n\n
@@ -68,8 +89,9 @@ OPTIONS:\n\t
 -h\tPrints help page.\n\t
 -d\tCheck dependencies and exit.\n\t
 -i\tInput file. Must be a Bismark aligned .bam file. REQUIRED\n\t
--s\tScratch directory. Default=$SCRATCH_DIR\n\t
+-s\tScratch directory. Default= a temporary folder created beside the input BAM\n\t
 -t\tNumber of threads to use. Default=SLURM_THREADS\n\t
+-M\tTotal sort memory budget in MB (split across threads for samtools). Default=SLURM allocation or 3072\n\t
 -q\tMinimum mapping quality for reads. Default=$MAPQ\n\t
 -C\tMinimum CpGs for reads. Default=$MIN_CPG\n\t
 -G\tGenome bin size for Diptest. Default=$DIPTEST_BINSIZE\n\t
@@ -82,11 +104,13 @@ OPTIONS:\n\t
 -l\tDon't create lollipop tracks. Default=ON\n\t
 -m\tDon't create heatmap track. Default=ON\n\t
 -b\tReference Bed File. Will ONLY perform diptest.\n\t
--D\tDon't create diptest track. Default=ON"
+-D\tDon't create diptest track. Default=ON\n\t
+-o\tOutput directory for Track_Hub. Default=current directory"
 
 
-OPTIONS="hi:q:C:D:H:B:R:c:s:t:z:dplmb:"
+OPTIONS="hi:q:C:G:D:H:B:R:c:s:t:z:o:M:dplmb:"
 
+# Load parameters from the command line.
 function parseOptions () {
 	if ( ! getopts $OPTIONS opt); then
 		echo -e $HELP
@@ -102,7 +126,7 @@ function parseOptions () {
 			i) #set input file
 				INPUT=${OPTARG}
 				ORIGINAL=$INPUT
-				NAME=$(basename $INPUT .bam)
+				NAME=$(basename "$INPUT" .bam)
 				;;
 			q) #minimum MapQ
 				MAPQ=${OPTARG}
@@ -127,16 +151,12 @@ function parseOptions () {
 				;;
 			s) #scratch directory
 				SCRATCH_DIR=${OPTARG}
-				mkdir $SCRATCH_DIR
-				TEMP1=$SCRATCH_DIR"/temp"
-				TEMP2=$SCRATCH_DIR"/temp2"
-				TEMP3=$SCRATCH_DIR"/temp3"
-				TEMP4=$SCRATCH_DIR"/temp4"
-				TEMP5=$SCRATCH_DIR"/temp5"
-				PE_BAM=$SCRATCH_DIR"/temp.bam"
 				;;
 			t) #threads
 				THREADS=${OPTARG}
+				;;
+			M) ## total sort memory budget in MB
+				SORT_MEM_MB=${OPTARG}
 				;;
 			z) #chromosome sizes file
 				CHR_SIZES=${OPTARG}
@@ -163,13 +183,16 @@ function parseOptions () {
 			D) #don't do diptest
 				DIPTEST=0
 				;;
+			o) #output directory
+				OUTDIR=${OPTARG}
+				;;
 			\?)
 				echo -e "\n###############\nERROR: Invalid Option! \nTry '$(basename $0) -h' for help.\n###############" >&2
 				exit 1
 				;;
 		esac
 	done
-	if [[ ! -f $INPUT ]]; then
+	if [[ ! -f "$INPUT" ]]; then
 		echo "Not a valid input file."
 		exit 1
 	fi
@@ -177,7 +200,7 @@ function parseOptions () {
 
 function checkDependencies () {
 	DEPENDENCIES=(bedtools awk samtools Rscript bedToBigBed bedGraphToBigWig)
-	if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
+	if [[ $TRAD == 1 ]] ; then # Create traditional plots
 		DEPENDENCIES=(${DEPENDENCIES[@]} bismark $BAMCOVERAGE)
 	fi
 	echo -e "Checking Dependencies:"
@@ -195,14 +218,15 @@ function checkDependencies () {
 }
 
 function initializeHub () {
-	HUB="Track_Hub/"
-	GENOME=$(basename $CHR_SIZES | cut -d. -f1)
+	HUB="${OUTDIR%/}/Track_Hub/"
+	GENOME=$(basename "$CHR_SIZES" | cut -d. -f1)
 	GENOME_DIR=$HUB$GENOME"/"
 	TRACKDB=$GENOME_DIR"trackDb.txt"
-	mkdir $HUB
-	mkdir $GENOME_DIR
-	printf "hub <HubNameWithoutSpace>\nshortLabel <max 17 char, display on side>\nlongLabel Hub to display <fill> data at UCSC\ngenomesFile genomes.txt\nemail <email-optional>" > $HUB/hub.txt
-	printf "genome %s\ntrackDb %s/trackDb.txt" $GENOME $GENOME > $HUB/genomes.txt
+	mkdir -p "${OUTDIR%/}"
+	mkdir "$HUB"
+	mkdir "$GENOME_DIR"
+	printf "hub <HubNameWithoutSpace>\nshortLabel <max 17 char, display on side>\nlongLabel Hub to display <fill> data at UCSC\ngenomesFile genomes.txt\nemail <email-optional>" > "$HUB/hub.txt"
+	printf "genome %s\ntrackDb %s/trackDb.txt" "$GENOME" "$GENOME" > "$HUB/genomes.txt"
 	
 	LOLLY_OUTPUT=$GENOME_DIR$NAME"_lolly.bb"
 	DIPTEST_OUTPUT=$GENOME_DIR$NAME"-"$DIPTEST_BINSIZE"bp"$MIN_CPG"CpG-diptest.bw"
@@ -213,13 +237,13 @@ function initializeHub () {
 function makeLollies () {
 	echo "Starting Lolly Generation"
 	echo "Converting to lolly..."
-	samtools view -q $MAPQ $INPUT | awk -f $LOLLY_SCRIPT > $TEMP2
-	sort -k1,1 -k2,2n --parallel=$THREADS --buffer-size="3G" -T $SCRATCH_DIR $TEMP2 > $TEMP1
+	samtools view -q $MAPQ "$INPUT" | awk -f "$LOLLY_SCRIPT" > "$TEMP2"
+	sort -k1,1 -k2,2n --parallel=$THREADS --buffer-size="$SORT_BUFFER" -T "$SCRATCH_DIR" "$TEMP2" > "$TEMP1"
 	echo "Compressing lollies..."
-	bedToBigBed -as=$BIGLOLLY_AS -type=bed9+1 $TEMP1 $CHR_SIZES $LOLLY_OUTPUT
-#	rm $TEMP1
-	LOLLY_NAME=$(basename $LOLLY_OUTPUT)
-	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigLolly\nbigDataUrl %s\nvisibility full\nautoScale on\nlollyNoStems on\nlollySizeField 10\nmaxWindowToDraw 20000\n\n" $LOLLY_NAME $LOLLY_NAME $LOLLY_NAME $LOLLY_NAME | tee -a $TRACKDB
+	bedToBigBed -as="$BIGLOLLY_AS" -type=bed9+1 "$TEMP1" "$CHR_SIZES" "$LOLLY_OUTPUT"
+#	rm "$TEMP1"
+	LOLLY_NAME=$(basename "$LOLLY_OUTPUT")
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigLolly\nbigDataUrl %s\nvisibility full\nautoScale on\nlollyNoStems on\nlollySizeField 10\nmaxWindowToDraw 20000\n\n" "$LOLLY_NAME" "$LOLLY_NAME" "$LOLLY_NAME" "$LOLLY_NAME" | tee -a "$TRACKDB"
 	echo "Finished Lolly Generation"
 }
 
@@ -229,30 +253,30 @@ function dipTest () {
 	echo "Making genomic windows..."
 	if [[ $REF_BED == "" ]] ; then # If not using input bed, then bin genome
 		REF_BED=$SCRATCH_DIR"/ref"-$DIPTEST_BINSIZE"bp.bed"
-		bedtools makewindows -w $DIPTEST_BINSIZE -b $GENOME_BED | awk 'OFS="\t"{if($1 ~ /chr[0-9XY]*$/) {print $0}}' | sort -k1,1 -k2,2n - > $REF_BED
+		bedtools makewindows -w $DIPTEST_BINSIZE -b "$GENOME_BED" | awk 'OFS="\t"{if($1 ~ /chr[0-9XY]*$/) {print $0}}' | sort -k1,1 -k2,2n - > "$REF_BED"
 	else # Using input bed file
 		REF_BED_NAME=${REF_BED%%.*}
 		DIPTEST_OUTPUT=$GENOME_DIR$NAME"_"$REF_BED_NAME"-"$MIN_CPG"CpG-diptest.bw"
-		echo $DIPTEST_OUTPUT
+		echo "$DIPTEST_OUTPUT"
 	fi
 
 	echo "Counting Bins..."
-	samtools view -q $MAPQ $INPUT |  awk -f $DIP_AWK_SCRIPT -v thresh=$MIN_CPG > $TEMP1
-	sort -k1,1 -k2,2n $TEMP1 > $TEMP2
+	samtools view -q $MAPQ "$INPUT" |  awk -f "$DIP_AWK_SCRIPT" -v thresh=$MIN_CPG > "$TEMP1"
+	sort -k1,1 -k2,2n "$TEMP1" > "$TEMP2"
 
 	echo "Mapping..."
-	bedtools map -a $REF_BED -b $TEMP2 -c 4 -o collapse | awk 'OFS="\t"{if($4 != ".") {print $0}}' > $TEMP3
+	bedtools map -a "$REF_BED" -b "$TEMP2" -c 4 -o collapse | awk 'OFS="\t"{if($4 != ".") {print $0}}' > "$TEMP3"
 
 	# R CODE STUFF
 	echo "Calculating Dip p-values..."
-	Rscript $R_SCRIPT $TEMP3 $TEMP4 $THREADS
-	sed -i 's/\"//g' $TEMP4
-	echo "Generating bigwig"$DIPTEST_OUTPUT
-	sort -k1,1 -k2,2n $TEMP4 > $TEMP5
-	bedGraphToBigWig $TEMP5 $CHR_SIZES $DIPTEST_OUTPUT
-	rm $TEMP1 $TEMP2 $TEMP3 $TEMP4 $TEMP5
-	DIPTEST_NAME=$(basename $DIPTEST_OUTPUT)
-	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 255,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME $DIPTEST_NAME | tee -a $TRACKDB
+	Rscript "$R_SCRIPT" "$TEMP3" "$TEMP4" $THREADS
+	sed -i 's/\"//g' "$TEMP4"
+	echo "Generating bigwig""$DIPTEST_OUTPUT"
+	sort -k1,1 -k2,2n "$TEMP4" > "$TEMP5"
+	bedGraphToBigWig "$TEMP5" "$CHR_SIZES" "$DIPTEST_OUTPUT"
+	rm "$TEMP1" "$TEMP2" "$TEMP3" "$TEMP4" "$TEMP5"
+	DIPTEST_NAME=$(basename "$DIPTEST_OUTPUT")
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 255,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" "$DIPTEST_NAME" "$DIPTEST_NAME" "$DIPTEST_NAME" "$DIPTEST_NAME" | tee -a "$TRACKDB"
 }
 
 function heatmap () {
@@ -261,15 +285,15 @@ function heatmap () {
 	PRIORITY=1
 	REF_BED_HEAT=$SCRATCH_DIR"ref"-$HEAT_GENOME_BINSIZE"bp.bed"
 	BW_DIR=$GENOME_DIR$NAME"/"
-	mkdir $BW_DIR
+	mkdir "$BW_DIR"
 	
-	printf "track %s\ncontainer multiWig\nshortLabel %s\nlongLabel %s\ntype bigWig\nvisibility full\nmaxHeightPixels 100:60:25\nconfigurable on\nviewLimits 0:100\nalwaysZero on\naggregate solidOverlay\nshowSubtrackColorOnUi on\npriority 1.0\n\n" $NAME $NAME $NAME | tee -a $TRACKDB
+	printf "track %s\ncontainer multiWig\nshortLabel %s\nlongLabel %s\ntype bigWig\nvisibility full\nmaxHeightPixels 100:60:25\nconfigurable on\nviewLimits 0:100\nalwaysZero on\naggregate solidOverlay\nshowSubtrackColorOnUi on\npriority 1.0\n\n" "$NAME" "$NAME" "$NAME" | tee -a "$TRACKDB"
 
 	echo "Making genomic windows..."
-	bedtools makewindows -w $HEAT_GENOME_BINSIZE -b $GENOME_BED | sort -k1,1 -k2,2n - > $REF_BED_HEAT
+	bedtools makewindows -w $HEAT_GENOME_BINSIZE -b "$GENOME_BED" | sort -k1,1 -k2,2n - > "$REF_BED_HEAT"
 
 	echo "Counting Bins..." # First level of binning - put reads into methylation bins
-	samtools view -q $MAPQ $INPUT | awk -f $HEAT_AWK_SCRIPT -v bins=$METH_BINS -v thresh=$MIN_CPG # TODO should this be done in scratch?
+	samtools view -q $MAPQ "$INPUT" | awk -f "$HEAT_AWK_SCRIPT" -v bins=$METH_BINS -v thresh=$MIN_CPG # TODO should this be done in scratch?
 
 	for (( BIN=100; BIN>=0; BIN-=$METH_BINS_SIZE ))
 	do
@@ -278,49 +302,49 @@ function heatmap () {
 		BEDGRAPH=$SCRATCH_DIR"/"$FILE".bedgraph"
 		
 		echo "Sorting..." # Just in case bam and ref are in different order
-		sort -k1,1 -k2,2n $FILE > $TEMP1
-		mv $TEMP1 $FILE
+		sort -k1,1 -k2,2n "$FILE" > "$TEMP1"
+		mv "$TEMP1" "$FILE"
 		
 		echo "Mapping..." # Second binning - pileup reads in each genomic window
-		bedtools map -a $REF_BED_HEAT -b $FILE -c 1 -o count > $BEDGRAPH
-		rm $FILE
+		bedtools map -a "$REF_BED_HEAT" -b "$FILE" -c 1 -o count > "$BEDGRAPH"
+		rm "$FILE"
 		
 		echo "Binning by depth..." # Third binning - determine color bin from read depth
-		pushd $SCRATCH_DIR # Move to scratch directory for bin bigwig creations
+		pushd "$SCRATCH_DIR" # Move to scratch directory for bin bigwig creations
 		awk -v bin=$BIN -v colorBinSize=$COLOR_BINS_SIZE -v maxReads=$MAX_READS 'OFS="\t"{
 			done=0;
 			if($4 > 0) {
 				for ( x=colorBinSize; x<maxReads; x+=colorBinSize ) {
 					if ($4 < x) {
-						print $1, $2, $3, bin > "bin"bin"-"x".bedgraph";
+						print $1, $2, $3, bin > ("bin"bin"-"x".bedgraph");
 						done=1;
 						break;
 					}
 				}
 				if (!done) {
-					print $1, $2, $3, bin > "bin"bin"-"maxReads".bedgraph";
+					print $1, $2, $3, bin > ("bin"bin"-"maxReads".bedgraph");
 				}
 			}
-		}' $BEDGRAPH
-		rm $BEDGRAPH
+		}' "$BEDGRAPH"
+		rm "$BEDGRAPH"
 		
 		# Generate entire genome bins for 0-0
 		awk -v bin=$BIN 'OFS="\t"{
 			print $0, bin;
-		}' $GENOME_BED > $FILE"-0.bedgraph"
+		}' "$GENOME_BED" > "${FILE}-0.bedgraph"
 		popd # Return from scratch directory
 		
 		# Generate trackdb track layout and coloring 
-		for BG in $SCRATCH_DIR"/"$FILE-*.bedgraph #(( CURR_BIN=0; CURR_BIN<=$MAX_READS; CURR_BIN+=$COLOR_BINS_SIZE ))
+		for BG in "${SCRATCH_DIR}/${FILE}"-*.bedgraph #(( CURR_BIN=0; CURR_BIN<=$MAX_READS; CURR_BIN+=$COLOR_BINS_SIZE ))
 		do
-			CURR_BIN=$(basename $BG .bedgraph)
+			CURR_BIN=$(basename "$BG" .bedgraph)
 			CURR_BIN=${CURR_BIN//$FILE-/}
-			BW_NAME=$(basename $BG .bedgraph).bw
+			BW_NAME=$(basename "$BG" .bedgraph).bw
 			BW=$BW_DIR$BW_NAME
-			if [[ -f $BG ]]; then
-				sort -k1,1 -k2,2n $BG > $TEMP1
-				bedGraphToBigWig $TEMP1 $CHR_SIZES $BW
-				rm $BG
+			if [[ -f "$BG" ]]; then
+				sort -k1,1 -k2,2n "$BG" > "$TEMP1"
+				bedGraphToBigWig "$TEMP1" "$CHR_SIZES" "$BW"
+				rm "$BG"
 				R=$(echo "scale=5;255*(3-(3*$CURR_BIN/$MAX_READS))" | bc)
 				R=$(echo "scale=0;$R/1" | bc)
 				R=$(( 255 < $R ? 255 : $R ))
@@ -332,21 +356,59 @@ function heatmap () {
 				B=$(echo "scale=0;$B/1" | bc)
 				B=$(( 0 > $B ? 0 : $B ))
 				COLOR=$R","$G","$B
-				printf "\ttrack %s\n\tparent %s\n\tshortLabel %s\n\tlongLabel %s\n\ttype bigWig\n\tbigDataUrl %s\n\tcolor %s\n\tpriority %s\n\n" $NAME"_"$BW_NAME $NAME $BW_NAME $BW_NAME $NAME"/"$BW_NAME $COLOR $PRIORITY | tee -a $TRACKDB
+				printf "\ttrack %s\n\tparent %s\n\tshortLabel %s\n\tlongLabel %s\n\ttype bigWig\n\tbigDataUrl %s\n\tcolor %s\n\tpriority %s\n\n" "$NAME"_"$BW_NAME" "$NAME" "$BW_NAME" "$BW_NAME" "$NAME"/"$BW_NAME" "$COLOR" "$PRIORITY" | tee -a "$TRACKDB"
 				((PRIORITY++))
 			fi
 		done
 	done
 }
 
+function computeSortMem () {
+	# Run this after parseOptions so it sees any -t (threads) or -M (budget) overrides.
+	if [[ -z $SORT_MEM_MB ]] ; then
+		if [[ -n $SLURM_MEM_PER_NODE ]] ; then
+			SORT_MEM_MB=$(( SLURM_MEM_PER_NODE * 8 / 10 )) # Use 80% of available memory. Why not
+		elif [[ -n $SLURM_MEM_PER_CPU ]] ; then
+			SORT_MEM_MB=$(( SLURM_MEM_PER_CPU * THREADS * 8 / 10 )) # Use 80% of available memory. Why not
+		else
+			SORT_MEM_MB=3072 # Default to 3GB if not on HPC.
+		fi
+	fi
+	# samtools sort -m is PER THREAD, so divide
+	SAMTOOLS_MEM_PER_THREAD_MB=$(( SORT_MEM_MB / THREADS ))
+	if [[ $SAMTOOLS_MEM_PER_THREAD_MB -lt 128 ]] ; then # minimum 
+		SAMTOOLS_MEM_PER_THREAD_MB=128
+	fi
+	SAMTOOLS_MEM="${SAMTOOLS_MEM_PER_THREAD_MB}M"
+	SORT_BUFFER="${SORT_MEM_MB}M"
+	echo "Sort memory: ${SORT_MEM_MB}M total (samtools -m $SAMTOOLS_MEM per thread across $THREADS threads)"
+}
+
+function setupScratch () { # Set scratch location and derive temp file paths
+	if [[ -z $SCRATCH_DIR ]] ; then
+		BAM_DIR="$(cd "$(dirname "$INPUT")" && pwd)"
+		SCRATCH_DIR="$(mktemp -d "$BAM_DIR/${NAME}_WHAM_scratch.XXXXXX")/"
+	else
+		mkdir -p "$SCRATCH_DIR"
+	fi
+	echo "Using scratch directory: $SCRATCH_DIR"
+	TEMP1=$SCRATCH_DIR"/temp"
+	TEMP2=$SCRATCH_DIR"/temp2"
+	TEMP3=$SCRATCH_DIR"/temp3"
+	TEMP4=$SCRATCH_DIR"/temp4"
+	TEMP5=$SCRATCH_DIR"/temp5"
+	PE_BAM=$SCRATCH_DIR"/temp.bam"
+}
+
 function makeBounds () { # Take chr sizes file and make bed file
-	GENOME_BED=$SCRATCH_DIR"/"$(basename $CHR_SIZES .sizes)".bounds"
-	awk 'OFS="\t"{print $1, 0, $2}' $CHR_SIZES > $TEMP1
-	sort -k1,1 -k2,2n $TEMP1 > $GENOME_BED
+	GENOME_BED=$SCRATCH_DIR"/"$(basename "$CHR_SIZES" .sizes)".bounds"
+	# Skip empty lines (e.g. a trailing empty line in the sizes file), that screw up makeWindows
+	awk 'OFS="\t"{if(NF>=2 && $1!="" && $2!="") print $1, 0, $2}' "$CHR_SIZES" > "$TEMP1"
+	sort -k1,1 -k2,2n "$TEMP1" > "$GENOME_BED"
 }
 
 function parsePE () { # Combine Methylation strings from PE reads into a single entry
-	FLAG=$(samtools view $INPUT | head -n 1 | cut -f2)
+	FLAG=$(samtools view "$INPUT" | head -n 1 | cut -f2)
 	if [[ $((FLAG&1)) == 1 ]] ; then #Paired-end
 		PAIRED=true
 	else
@@ -355,39 +417,55 @@ function parsePE () { # Combine Methylation strings from PE reads into a single 
 	echo "Data are Paired-end:" $PAIRED
 	if [[ $PAIRED == true ]] ; then
 		if [[ $REF_BED != "" ]] ; then # If using a reference bed file, only keep reads within 1kb of regions
-			bedtools slop -i $REF_BED -g $CHR_SIZES -b 1000 > $TEMP1
-			samtools view -bh -q $MAPQ -L $TEMP1 $INPUT > $PE_BAM
+			bedtools slop -i "$REF_BED" -g "$CHR_SIZES" -b 1000 > "$TEMP1"
+			samtools view -bh -q $MAPQ -L "$TEMP1" "$INPUT" > "$PE_BAM"
 			INPUT=$PE_BAM
 		fi
 		echo "Sorting PE BAM by read name..."
-		samtools sort -@ $THREADS -m 3G -T $SCRATCH_DIR -n -o $TEMP1 $INPUT
+		samtools sort -@ $THREADS -m "$SAMTOOLS_MEM" -T "$SCRATCH_DIR" -n -o "$TEMP1" "$INPUT"
 		echo "Combining Methylation for PE reads..."
-		samtools view -q $MAPQ $TEMP1 | awk -f $PE_PARSER > $TEMP2 # TODO implement error handling if PE_PARSER fails
-		samtools view -H $INPUT > $TEMP1
+		samtools view -q $MAPQ "$TEMP1" | awk -f "$PE_PARSER" > "$TEMP2" # TODO implement error handling if PE_PARSER fails
+		samtools view -H "$INPUT" > "$TEMP1"
 		echo "Compressing PE Data..."
-		cat $TEMP1 $TEMP2 | samtools view -@ $THREADS -bh -o $TEMP1
+		cat "$TEMP1" "$TEMP2" | samtools view -@ $THREADS -bh -o "$TEMP1"
 		echo "Sorting PE Data..."
-		samtools sort -@ $THREADS -m 3G -T $SCRATCH_DIR -o $PE_BAM $TEMP1
+		samtools sort -@ $THREADS -m "$SAMTOOLS_MEM" -T "$SCRATCH_DIR" -o "$PE_BAM" "$TEMP1"
 		INPUT=$PE_BAM
 	fi
 }
 
 function makeTradPlots () {
-	samtools index $INPUT
-	$BAMCOVERAGE --minMappingQuality $MAPQ --outFileFormat bigwig -p $THREADS -b $ORIGINAL -o $COVERAGE_OUTPUT
-	bismark_methylation_extractor -o $SCRATCH_DIR --gzip --multicore $THREADS --bedGraph --mbias_off $INPUT
-	zcat $SCRATCH_DIR$NAME".bedGraph.gz" > $TEMP1
-	tail -n +2 $TEMP1 > $TEMP2
-	sort -k1,1 -k2,2n $TEMP2 > $TEMP1
-	bedGraphToBigWig $TEMP1 $CHR_SIZES $METHYL_OUTPUT
-	METHYL_NAME=$(basename $METHYL_OUTPUT)
-	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $METHYL_NAME $METHYL_NAME $METHYL_NAME $METHYL_NAME | tee -a $TRACKDB
-	COVERAGE_NAME=$(basename $COVERAGE_OUTPUT)
-	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" $COVERAGE_NAME $COVERAGE_NAME $COVERAGE_NAME $COVERAGE_NAME | tee -a $TRACKDB
+	samtools index "$INPUT"
+	"$BAMCOVERAGE" --minMappingQuality $MAPQ --outFileFormat bigwig -p $THREADS -b "$ORIGINAL" -o "$COVERAGE_OUTPUT"
+	# if there is at least one single-end read, use SE mode (order-independent)
+	BME_TOTAL=$(samtools view -c "$INPUT")
+	BME_SE=$(samtools view -c -F 1 "$INPUT")
+	if [[ $BME_TOTAL -gt 0 ]] && [[ $BME_SE -eq 0 ]] ; then
+		echo "Methylation extractor: treating data as paired-end (name-sorting first)"
+		samtools sort -@ $THREADS -m "$SAMTOOLS_MEM" -T "$SCRATCH_DIR" -n -o "$TEMP3" "$INPUT"
+		BME_INPUT="$TEMP3"
+		BME_MODE="-p"
+	else
+		echo "Methylation extractor: treating data as single-end"
+		BME_INPUT="$INPUT"
+		BME_MODE="-s"
+	fi
+	BME_BASE=$(basename "$BME_INPUT" .bam)
+	bismark_methylation_extractor $BME_MODE -o "$SCRATCH_DIR" --gzip --multicore $THREADS --bedGraph --mbias_off "$BME_INPUT"
+	zcat "$SCRATCH_DIR""$BME_BASE"".bedGraph.gz" > "$TEMP1"
+	tail -n +2 "$TEMP1" > "$TEMP2"
+	sort -k1,1 -k2,2n "$TEMP2" > "$TEMP1"
+	bedGraphToBigWig "$TEMP1" "$CHR_SIZES" "$METHYL_OUTPUT"
+	METHYL_NAME=$(basename "$METHYL_OUTPUT")
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" "$METHYL_NAME" "$METHYL_NAME" "$METHYL_NAME" "$METHYL_NAME" | tee -a "$TRACKDB"
+	COVERAGE_NAME=$(basename "$COVERAGE_OUTPUT")
+	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" "$COVERAGE_NAME" "$COVERAGE_NAME" "$COVERAGE_NAME" "$COVERAGE_NAME" | tee -a "$TRACKDB"
 }
 
-## Actually Run Stuff ##
-parseOptions $@
+### Actually Run Stuff ###
+parseOptions "$@"
+computeSortMem
+setupScratch
 loadModules
 makeBounds
 initializeHub
@@ -401,9 +479,9 @@ fi
 if [[ $HEATMAP == 1 ]] ; then #Create Heatmap
 	heatmap
 fi
-if [[ $DIPTEST == 1 ]] ; then #Create Heatmap
+if [[ $DIPTEST == 1 ]] ; then #Create Diptest
 	dipTest
 fi
 
-rm -r $SCRATCH_DIR
-
+### Remove temporary files and directory ###
+rm -r "$SCRATCH_DIR"

@@ -1,0 +1,33 @@
+# Conda environment for installing and running WHAM 
+# (WGBS Heterogeneity Analysis at the Molecular level)
+#
+# To install: 
+#   conda env create -f environment.yml
+#   conda activate wham
+#
+# Apple Silicon (osx-arm64) note: some UCSC tools (ucsc-*) are only built for osx-64 on bioconda. 
+# If the default installation does not find them, create the env under the osx-64 subdir (runs via Rosetta 2):
+# CONDA_SUBDIR=osx-64 conda env create -f environment.yml
+name: wham
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # core pipeline tools and utilities
+  - samtools
+  - bedtools
+  - gawk
+  - ucsc-bedtobigbed
+  - ucsc-bedgraphtobigwig
+  # for consistency with macOS
+  - coreutils
+  - sed
+  - gzip
+  # for running DipTest.R
+  - r-base       
+  - r-diptest
+  - r-foreach 
+  - r-doparallel
+  # only needed for traditional methylation/coverage tracks (-p)
+  - bismark
+  - deeptools
