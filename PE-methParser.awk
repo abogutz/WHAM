@@ -60,7 +60,7 @@ BEGIN{
 					}
 					r1start=$4
 				} else if($4 < r1end) { # R2 starts in R1
-					methCalls2=substr(methCalls2,r1end-$4)
+					methCalls2=substr(methCalls2,r1end-$4+1)
 					methCalls=(methCalls)(methCalls2)
 				} else { # Gap between R1 and R2
 					gap=$4-r1end;

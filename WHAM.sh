@@ -108,7 +108,7 @@ OPTIONS:\n\t
 -o\tOutput directory for Track_Hub. Default=current directory"
 
 
-OPTIONS="hi:q:C:G:D:H:B:R:c:s:t:z:o:M:dplmb:"
+OPTIONS="hi:q:C:G:DH:B:R:c:s:t:z:o:M:dplmb:"
 
 # Load parameters from the command line.
 function parseOptions () {
