@@ -52,9 +52,10 @@ OUTDIR="."
 ### Dynamic Assignment of Values ###
 # Auto-detect the directory this script lives in so the helper scripts are found
 if [[ -n $SLURM_JOB_ID ]] ; then # Detect if running in a slurm environment
-	COMMAND="$(scontrol show job $SLURM_JOB_ID | grep Command)"
-	COMMAND2="${COMMAND//Command=/}"
-	SCRIPTS_DIR="${COMMAND2%\/*}/"
+	COMMAND="$(scontrol show job $SLURM_JOB_ID | grep Command)" # Extract sbatch command
+	COMMAND2="${COMMAND//Command=/}" # Remove Leading Command=
+	SCRIPTS_DIR="${COMMAND2%\/*}/" # Remove everything following last "/"
+	SCRIPTS_DIR="$(echo $SCRIPTS_DIR | awk '{$1=$1;print}')" # Remove Leading Whitespace
 else
 	SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/"
 fi
