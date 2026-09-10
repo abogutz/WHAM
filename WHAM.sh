@@ -23,29 +23,6 @@
 # If creating traditional plots, additionally requires bismark and Deeptools bamCoverage
 
 
-# Auto-detect the directory this script lives in so the helper scripts are found
-SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/"
-
-PE_PARSER=$SCRIPTS_DIR"PE-methParser.awk"
-LOLLY_SCRIPT=$SCRIPTS_DIR"lolly.awk"
-DIP_AWK_SCRIPT=$SCRIPTS_DIR"diptest-bin.awk"
-HEAT_AWK_SCRIPT=$SCRIPTS_DIR"heatmap-bin.awk"
-BIGLOLLY_AS=$SCRIPTS_DIR"bigLolly-size.as"
-R_SCRIPT=$SCRIPTS_DIR"DipTest.R"
-BAMCOVERAGE="bamCoverage"
-
-# The config only provides loadModules for HPC module systems. Optional
-# on a conda/local install the tools are already on PATH.
-CONFIG=$SCRIPTS_DIR"ComputeCanada.config"
-if [[ -f "$CONFIG" ]] ; then
-	source "$CONFIG"
-fi
-if ! declare -f loadModules > /dev/null ; then
-	function loadModules { : ; }
-fi
-
-
-
 ### Default Values ###
 MAPQ=40
 MIN_CPG=4
@@ -60,15 +37,6 @@ COLOR_BINS=5
 # It is deleted at the end of the run.
 SCRATCH_DIR=""
 
-# Specify number of threads.
-if [[ -n $SLURM_CPUS_PER_TASK ]] ; then
-	# Threads = SLURM allocation on HPC, otherwise detect available cores.
-	THREADS=$SLURM_CPUS_PER_TASK
-else
-    # If not on HPC, detect available cores. Set 4 minimum.
-	THREADS=$( { command -v nproc > /dev/null && nproc; } || sysctl -n hw.ncpu 2> /dev/null || echo 4 )
-fi
-
 # Set with -M, otherwise it is computed in computeSortMem.
 SORT_MEM_MB=""
 
@@ -80,6 +48,43 @@ LOLLY=1
 HEATMAP=1
 DIPTEST=1
 OUTDIR="."
+
+### Dynamic Assignment of Values ###
+# Auto-detect the directory this script lives in so the helper scripts are found
+if [[ -n $SLURM_JOB_ID ]] ; then # Detect if running in a slurm environment
+	COMMAND="$(scontrol show job $SLURM_JOB_ID | grep Command)"
+	COMMAND2="${COMMAND//Command=/}"
+	SCRIPTS_DIR="${COMMAND2%\/*}/"
+else
+	SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/"
+fi
+
+# The config only provides loadModules for HPC module systems. Optional
+# on a conda/local install the tools are already on PATH.
+CONFIG=$SCRIPTS_DIR"ComputeCanada.config"
+if [[ -f "$CONFIG" ]] ; then
+	source "$CONFIG"
+fi
+if ! declare -f loadModules > /dev/null ; then
+	function loadModules { : ; }
+fi
+
+# Specify number of threads.
+if [[ -n $SLURM_CPUS_PER_TASK ]] ; then
+	# Threads = SLURM allocation on HPC, otherwise detect available cores.
+	THREADS=$SLURM_CPUS_PER_TASK
+else
+    # If not on HPC, detect available cores. Set 4 minimum.
+	THREADS=$( { command -v nproc > /dev/null && nproc; } || sysctl -n hw.ncpu 2> /dev/null || echo 4 )
+fi
+
+PE_PARSER=$SCRIPTS_DIR"PE-methParser.awk"
+LOLLY_SCRIPT=$SCRIPTS_DIR"lolly.awk"
+DIP_AWK_SCRIPT=$SCRIPTS_DIR"diptest-bin.awk"
+HEAT_AWK_SCRIPT=$SCRIPTS_DIR"heatmap-bin.awk"
+BIGLOLLY_AS=$SCRIPTS_DIR"bigLolly-size.as"
+R_SCRIPT=$SCRIPTS_DIR"DipTest.R"
+BAMCOVERAGE="bamCoverage"
 
 ### Help Messages ###
 HELP="USAGE:\t $(basename $0) [OPTIONS] -h for help"
