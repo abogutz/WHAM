@@ -273,7 +273,7 @@ function makeLollies () {
 	echo "Compressing lollies..."
 	bedToBigBed -as="$BIGLOLLY_AS" -type=bed9+1 "$TEMP1" "$CHR_SIZES" "$LOLLY_OUTPUT_FINAL"
 #	rm "$TEMP1"
-	LOLLY_NAME=$(basename "$LOLLY_OUTPUT")
+	LOLLY_NAME=$(basename "$LOLLY_OUTPUT_FINAL")
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigLolly\nbigDataUrl %s\nvisibility full\nautoScale on\nlollyNoStems on\nlollySizeField 10\nmaxWindowToDraw 20000\n\n" "$LOLLY_NAME" "$LOLLY_NAME" "$LOLLY_NAME" "$LOLLY_NAME" | tee -a "$TRACKDB"
 	echo "Finished Lolly Generation"
 }
