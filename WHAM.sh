@@ -31,6 +31,8 @@ HEAT_GENOME_BINSIZE=25
 METH_BINS=5
 MAX_READS=10
 COLOR_BINS=5
+NON_CPG_METH_THRESH=0
+DEDUP=0
 
 # Scratch: default is a dedicated folder beside the input BAM. 
 # Alternatively it can be set with -s .
@@ -99,6 +101,8 @@ OPTIONS:\n\t
 -t\tNumber of threads to use. Default=SLURM_THREADS\n\t
 -M\tTotal sort memory budget in MB (split across threads for samtools). Default=SLURM allocation or 3072\n\t
 -q\tMinimum mapping quality for reads. Default=$MAPQ\n\t
+-x\tPerform bismark deduplication for PCR duplicates. Default=OFF\n\t
+-y\tPerform bismark filtering of low conversion efficiency. Enter the number of methylated calls in non-CG context per read to filter out. Default=OFF\n\t
 -C\tMinimum CpGs for reads. Default=$MIN_CPG\n\t
 -G\tGenome bin size for Diptest. Default=$DIPTEST_BINSIZE\n\t
 -H\tGenome bin size for Heatmap. Default=$HEAT_GENOME_BINSIZE\n\t
@@ -114,7 +118,7 @@ OPTIONS:\n\t
 -o\tOutput directory for Track_Hub. Default=current directory"
 
 
-OPTIONS="hi:q:C:G:DH:B:R:c:s:t:z:o:M:dplmb:"
+OPTIONS="hi:q:C:G:DH:B:R:c:s:t:z:o:M:dplmb:xy:"
 
 # Load parameters from the command line.
 function parseOptions () {
@@ -191,6 +195,12 @@ function parseOptions () {
 				;;
 			o) #output directory
 				OUTDIR=${OPTARG}
+				;;
+			x) #Deduplicate bam file
+				DEDUP=1
+				;;
+			y) #bismark conversion threshold filtering
+				NON_CPG_METH_THRESH=${OPTARG}
 				;;
 			\?)
 				echo -e "\n###############\nERROR: Invalid Option! \nTry '$(basename $0) -h' for help.\n###############" >&2
@@ -468,6 +478,20 @@ function makeTradPlots () {
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 0,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" "$COVERAGE_NAME" "$COVERAGE_NAME" "$COVERAGE_NAME" "$COVERAGE_NAME" | tee -a "$TRACKDB"
 }
 
+function groomBam () { # Perform bismark deduplication and conversion threshold filtering if requested
+	DEDUP_BAM=$SCRATCH_DIR"/temp.deduplicated.bam"
+	FILTER_BAM=$SCRATCH_DIR"/filter.bam"
+	if [[ $DEDUP == 1 ]] ; then
+		bismark dedup --parallel $THREADS -o "$DEDUP_BAM" "$INPUT"
+		INPUT=$DEDUP_BAM
+	fi
+	if [[ $NON_CPG_METH_THRESH != 0 ]] ; then
+		bismark filter --threshold $NON_CPG_METH_THRESH "$INPUT"
+		mv nonCG_filtered.bam $FILTER_BAM
+		INPUT=$FILTER_BAM
+	fi
+}
+
 ### Actually Run Stuff ###
 parseOptions "$@"
 computeSortMem
@@ -475,6 +499,7 @@ setupScratch
 loadModules
 makeBounds
 initializeHub
+groomBam
 if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
 	makeTradPlots
 fi
