@@ -106,7 +106,7 @@ OPTIONS:\n\t
 -x\tPerform bismark deduplication for PCR duplicates. Default=OFF\n\t
 -y\tPerform bismark filtering of low conversion efficiency. Enter the number of methylated calls in non-CG context per read to filter out. Default=OFF\n\t
 -C\tMinimum CpGs for reads. Default=$MIN_CPG\n\t
--h\tPerform CHH analysis. Default=OFF\n\t
+-f\tPerform CHH analysis. Default=OFF\n\t
 -g\tPerform CHG analysis. Default=OFF\n\t
 -G\tGenome bin size for Diptest. Default=$DIPTEST_BINSIZE\n\t
 -H\tGenome bin size for Heatmap. Default=$HEAT_GENOME_BINSIZE\n\t
@@ -122,7 +122,7 @@ OPTIONS:\n\t
 -o\tOutput directory for Track_Hub. Default=current directory"
 
 
-OPTIONS="hi:q:C:G:DH:B:R:c:s:t:z:o:M:dplmb:xy:hg"
+OPTIONS="hi:q:C:G:DH:B:R:c:s:t:z:o:M:dplmb:xy:fg"
 
 # Load parameters from the command line.
 function parseOptions () {
@@ -206,7 +206,7 @@ function parseOptions () {
 			y) #bismark conversion threshold filtering
 				NON_CPG_METH_THRESH=${OPTARG}
 				;;
-			h) #CHH analysis
+			f) #CHH analysis
 				CHH=1
 				;;
 			g) #CHH analysis
