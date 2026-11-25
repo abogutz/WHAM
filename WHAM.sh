@@ -262,7 +262,7 @@ function initializeHub () {
 
 function makeLollies () {
 	if [[ $MODE != "CG" ]] ; then 
-		LOLLY_OUTPUT_FINAL=${LOLLY_OUTPUT//_lolly.bb/_$MODElolly.bb}
+		LOLLY_OUTPUT_FINAL=${LOLLY_OUTPUT//_lolly.bb/_$MODE"lolly.bb"}
 	else
 		LOLLY_OUTPUT_FINAL=$LOLLY_OUTPUT
 	fi
