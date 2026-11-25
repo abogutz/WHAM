@@ -317,9 +317,10 @@ function heatmap () { #TODO make CHH/CHG tolerant
 	REF_BED_HEAT=$SCRATCH_DIR"ref"-$HEAT_GENOME_BINSIZE"bp.bed"
 
 	BW_DIR=$GENOME_DIR$MODE$NAME"/"
+	TRACKNAME=$NAME"_"$MODE
 	mkdir "$BW_DIR"
 	
-	printf "track %s\ncontainer multiWig\nshortLabel %s\nlongLabel %s\ntype bigWig\nvisibility full\nmaxHeightPixels 100:60:25\nconfigurable on\nviewLimits 0:100\nalwaysZero on\naggregate solidOverlay\nshowSubtrackColorOnUi on\npriority 1.0\n\n" "$NAME" "$NAME" "$NAME" | tee -a "$TRACKDB"
+	printf "track %s\ncontainer multiWig\nshortLabel %s\nlongLabel %s\ntype bigWig\nvisibility full\nmaxHeightPixels 100:60:25\nconfigurable on\nviewLimits 0:100\nalwaysZero on\naggregate solidOverlay\nshowSubtrackColorOnUi on\npriority 1.0\n\n" "$TRACKNAME" "$TRACKNAME" "$TRACKNAME" | tee -a "$TRACKDB"
 
 	echo "Making genomic windows..."
 	bedtools makewindows -w $HEAT_GENOME_BINSIZE -b "$GENOME_BED" | sort -k1,1 -k2,2n - > "$REF_BED_HEAT"
@@ -388,7 +389,7 @@ function heatmap () { #TODO make CHH/CHG tolerant
 				B=$(echo "scale=0;$B/1" | bc)
 				B=$(( 0 > $B ? 0 : $B ))
 				COLOR=$R","$G","$B
-				printf "\ttrack %s\n\tparent %s\n\tshortLabel %s\n\tlongLabel %s\n\ttype bigWig\n\tbigDataUrl %s\n\tcolor %s\n\tpriority %s\n\n" "$NAME"_"$BW_NAME" "$NAME" "$BW_NAME" "$BW_NAME" "$MODE$NAME"/"$BW_NAME" "$COLOR" "$PRIORITY" | tee -a "$TRACKDB"
+				printf "\ttrack %s\n\tparent %s\n\tshortLabel %s\n\tlongLabel %s\n\ttype bigWig\n\tbigDataUrl %s\n\tcolor %s\n\tpriority %s\n\n" "$NAME"_"$BW_NAME" "$TRACKNAME" "$BW_NAME" "$BW_NAME" "$MODE$NAME"/"$BW_NAME" "$COLOR" "$PRIORITY" | tee -a "$TRACKDB"
 				((PRIORITY++))
 			fi
 		done
