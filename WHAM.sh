@@ -33,6 +33,8 @@ MAX_READS=10
 COLOR_BINS=5
 NON_CPG_METH_THRESH=0
 DEDUP=0
+CHH=0
+CHG=0
 
 # Scratch: default is a dedicated folder beside the input BAM. 
 # Alternatively it can be set with -s .
@@ -104,6 +106,8 @@ OPTIONS:\n\t
 -x\tPerform bismark deduplication for PCR duplicates. Default=OFF\n\t
 -y\tPerform bismark filtering of low conversion efficiency. Enter the number of methylated calls in non-CG context per read to filter out. Default=OFF\n\t
 -C\tMinimum CpGs for reads. Default=$MIN_CPG\n\t
+-h\tPerform CHH analysis. Default=OFF\n\t
+-g\tPerform CHG analysis. Default=OFF\n\t
 -G\tGenome bin size for Diptest. Default=$DIPTEST_BINSIZE\n\t
 -H\tGenome bin size for Heatmap. Default=$HEAT_GENOME_BINSIZE\n\t
 -B\tNumber of methylation bins for Heatmap. Default=$METH_BINS\n\t
@@ -118,7 +122,7 @@ OPTIONS:\n\t
 -o\tOutput directory for Track_Hub. Default=current directory"
 
 
-OPTIONS="hi:q:C:G:DH:B:R:c:s:t:z:o:M:dplmb:xy:"
+OPTIONS="hi:q:C:G:DH:B:R:c:s:t:z:o:M:dplmb:xy:hg"
 
 # Load parameters from the command line.
 function parseOptions () {
@@ -202,6 +206,12 @@ function parseOptions () {
 			y) #bismark conversion threshold filtering
 				NON_CPG_METH_THRESH=${OPTARG}
 				;;
+			h) #CHH analysis
+				CHH=1
+				;;
+			g) #CHH analysis
+				CHG=1
+				;;
 			\?)
 				echo -e "\n###############\nERROR: Invalid Option! \nTry '$(basename $0) -h' for help.\n###############" >&2
 				exit 1
@@ -251,12 +261,17 @@ function initializeHub () {
 }
 
 function makeLollies () {
+	if [[ $MODE != "CG" ]] ; then 
+		LOLLY_OUTPUT_FINAL=${LOLLY_OUTPUT//_lolly.bb/_$MODElolly.bb}
+	else
+		LOLLY_OUTPUT_FINAL=$LOLLY_OUTPUT
+	fi
 	echo "Starting Lolly Generation"
 	echo "Converting to lolly..."
-	samtools view -q $MAPQ "$INPUT" | awk -f "$LOLLY_SCRIPT" > "$TEMP2"
+	samtools view -q $MAPQ "$INPUT" | awk -v mode $MODE -f "$LOLLY_SCRIPT" > "$TEMP2"
 	sort -k1,1 -k2,2n --parallel=$THREADS --buffer-size="$SORT_BUFFER" -T "$SCRATCH_DIR" "$TEMP2" > "$TEMP1"
 	echo "Compressing lollies..."
-	bedToBigBed -as="$BIGLOLLY_AS" -type=bed9+1 "$TEMP1" "$CHR_SIZES" "$LOLLY_OUTPUT"
+	bedToBigBed -as="$BIGLOLLY_AS" -type=bed9+1 "$TEMP1" "$CHR_SIZES" "$LOLLY_OUTPUT_FINAL"
 #	rm "$TEMP1"
 	LOLLY_NAME=$(basename "$LOLLY_OUTPUT")
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigLolly\nbigDataUrl %s\nvisibility full\nautoScale on\nlollyNoStems on\nlollySizeField 10\nmaxWindowToDraw 20000\n\n" "$LOLLY_NAME" "$LOLLY_NAME" "$LOLLY_NAME" "$LOLLY_NAME" | tee -a "$TRACKDB"
@@ -295,12 +310,13 @@ function dipTest () {
 	printf "track %s\nshortLabel %s\nlongLabel %s\ntype bigWig\nbigDataUrl %s\ncolor 255,0,0\nvisibility full\nmaxHeightPixels 100:60:25\nautoScale on\nalwaysZero on\nyLineOnOff on\nyLineMark 1.3\n\n" "$DIPTEST_NAME" "$DIPTEST_NAME" "$DIPTEST_NAME" "$DIPTEST_NAME" | tee -a "$TRACKDB"
 }
 
-function heatmap () {
+function heatmap () { #TODO make CHH/CHG tolerant
 	let METH_BINS_SIZE=100/$METH_BINS
 	let COLOR_BINS_SIZE=$MAX_READS/$COLOR_BINS
 	PRIORITY=1
 	REF_BED_HEAT=$SCRATCH_DIR"ref"-$HEAT_GENOME_BINSIZE"bp.bed"
-	BW_DIR=$GENOME_DIR$NAME"/"
+
+	BW_DIR=$GENOME_DIR$MODE$NAME"/"
 	mkdir "$BW_DIR"
 	
 	printf "track %s\ncontainer multiWig\nshortLabel %s\nlongLabel %s\ntype bigWig\nvisibility full\nmaxHeightPixels 100:60:25\nconfigurable on\nviewLimits 0:100\nalwaysZero on\naggregate solidOverlay\nshowSubtrackColorOnUi on\npriority 1.0\n\n" "$NAME" "$NAME" "$NAME" | tee -a "$TRACKDB"
@@ -309,7 +325,7 @@ function heatmap () {
 	bedtools makewindows -w $HEAT_GENOME_BINSIZE -b "$GENOME_BED" | sort -k1,1 -k2,2n - > "$REF_BED_HEAT"
 
 	echo "Counting Bins..." # First level of binning - put reads into methylation bins
-	samtools view -q $MAPQ "$INPUT" | awk -f "$HEAT_AWK_SCRIPT" -v bins=$METH_BINS -v thresh=$MIN_CPG # TODO should this be done in scratch?
+	samtools view -q $MAPQ "$INPUT" | awk -f "$HEAT_AWK_SCRIPT" -v bins=$METH_BINS -v thresh=$MIN_CPG -v mode=$MODE # TODO should this be done in scratch?
 
 	for (( BIN=100; BIN>=0; BIN-=$METH_BINS_SIZE ))
 	do
@@ -355,7 +371,7 @@ function heatmap () {
 		do
 			CURR_BIN=$(basename "$BG" .bedgraph)
 			CURR_BIN=${CURR_BIN//$FILE-/}
-			BW_NAME=$(basename "$BG" .bedgraph).bw
+			BW_NAME=$(basename "$BG" .bedgraph)$MODE.bw
 			BW=$BW_DIR$BW_NAME
 			if [[ -f "$BG" ]]; then
 				sort -k1,1 -k2,2n "$BG" > "$TEMP1"
@@ -505,10 +521,28 @@ if [[ $TRAD == 1 ]] ; then #Create Traditional Plots
 fi
 parsePE
 if [[ $LOLLY == 1 ]] ; then #Create Lollipops
+	MODE="CG"
 	makeLollies
+	if [[ $CHG == 1 ]] ;  then
+		MODE="CHG"
+		makeLollies
+	fi
+	if [[ $CHH == 1 ]] ;  then
+		MODE="CHH"
+		makeLollies
+	fi
 fi
 if [[ $HEATMAP == 1 ]] ; then #Create Heatmap
+	MODE="CG"
 	heatmap
+	if [[ $CHG == 1 ]] ;  then
+		MODE="CHG"
+		heatmap
+	fi
+	if [[ $CHH == 1 ]] ;  then
+		MODE="CHH"
+		heatmap
+	fi
 fi
 if [[ $DIPTEST == 1 ]] ; then #Create Diptest
 	dipTest

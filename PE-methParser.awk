@@ -28,11 +28,11 @@ BEGIN{
 				exit 1;
 			}
 		}
-		if(substr($XM, 6) ~ /[zZ]/) { # Mine XM tag
+		if(substr($XM, 6) ~ /[zZ]/) { # Mine XM tag to confirm CpG overlap
 			storeValues();
 		}
 	} else { # Second Read
-		if(substr($XM, 6) !~ /[zZ]/) { # Mine XM tag
+		if(substr($XM, 6) !~ /[zZ]/) { # Mine XM tag to confirm CpG overlap
 			print prevRead;
 			read1=1;
 		} else {

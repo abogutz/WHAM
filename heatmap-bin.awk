@@ -7,6 +7,28 @@
 # Last Updated 2026-01-06
 
 BEGIN{
+	switch (mode) {
+		case "CG":
+			methylCall="Z";
+			unmethylCall="z";
+			var="[zZ]";
+			break;
+		case "CHH":
+			methylCall="H";
+			unmethylCall="h";
+			var="[hH]";
+			break;
+		case "CHG":
+			methylCall="X";
+			unmethylCall="x";
+			var="[xX]";
+			break;
+		default: #CpG mode
+			methylCall="Z";
+			unmethylCall="z";
+			var="[zZ]";
+			break;
+	}
 	OFS="\t";
 	done=1;
 	if( ! bins ) { bins=5; }
@@ -30,7 +52,7 @@ BEGIN{
 		}
 	}
 	methCalls=substr($XM, 6) # Get rid of leading characters
-	calls=patsplit(methCalls, meth, /[zZ]/, len); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
+	calls=patsplit(methCalls, meth, var, len); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
 	if ( calls > thresh && done > 0 ) {
 		start=$4;
 		end=start;
@@ -41,9 +63,9 @@ BEGIN{
 		methyl=0;
 		unmethyl=0;
 		for ( x=1; x<= calls; x++ ) {
-			if(meth[x] == "z") {
+			if(meth[x] == unmethylCall) {
 				unmethyl++;
-			} else if(meth[x] =="Z") {
+			} else if(meth[x] == methylCall) {
 				methyl++;
 			}
 		}

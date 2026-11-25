@@ -5,6 +5,24 @@
 # Last Updated 2026-07-07 using Marlet's lolly variant (light-blue caps and per-bp markers)
 
 BEGIN {
+	switch (mode) {
+		case "CG":
+			unmethyl="z";
+			var="[zZ]";
+			break;
+		case "CHH":
+			unmethyl="h";
+			var="[hH]";
+			break;
+		case "CHG":
+			unmethyl="x";
+			var="[xX]";
+			break;
+		default: #CpG mode
+			unmethyl="z";
+			var="[zZ]";
+			break;
+	}
 	OFS="\t";
 	black="0,0,0";
 	white="255,255,255";
@@ -53,7 +71,8 @@ BEGIN {
 		}
 	}
 	methCalls=substr($XM, 6) # Remove leading characters in meth calls - which should always be in column 16 (BUT IT ISNT)
-	calls=split(methCalls, len, /[zZ]/, meth); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
+#	calls=split(methCalls, len, /[zZ]/, meth); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
+	calls=split(methCalls, len, var, meth); # Split methylation calls into inter-CpG distances (len) and CpG meth calls (meth)
 	if ( calls > 1 ) {
 		start=$4;
 		for(strand=1; strand<1000; strand++) {
@@ -75,7 +94,7 @@ BEGIN {
 					print chr, start+i-1, start+i, "bp", strand, ".", 0, 0, grey, 0;
 				}
 				start+=length(len[x]);
-				if ( meth[x] == "z" ) { # unmethylated
+				if ( meth[x] == unmethyl ) { # unmethylated
 					colour = white;
 				} else { # methylated
 					colour = black;
@@ -93,7 +112,7 @@ BEGIN {
 			gap=match(methCalls, /\++/);
 			if(gap != 0) {
 				for(start=0; start<RLENGTH; start+=gapStep) {
-								print chr, $4+gap+start-1, $4+gap+start, "gap", strand, ".", 0, 0, grey, gapSize; # gap in grey
+					print chr, $4+gap+start-1, $4+gap+start, "gap", strand, ".", 0, 0, grey, gapSize; # gap in grey
 				}
 			}
 		}
