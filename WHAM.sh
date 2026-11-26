@@ -507,7 +507,7 @@ function groomBam () { # Perform bismark deduplication and conversion threshold 
 	if [[ $NON_CPG_METH_THRESH != 0 ]] ; then
 		echo "Filtering for non-conversion" $INPUT
 		filter_non_conversion --threshold $NON_CPG_METH_THRESH "$INPUT"
-		mv nonCG_filtered.bam $FILTER_BAM
+		mv ${INPUT//.bam/.nonCG_filtered.bam} $FILTER_BAM
 		INPUT=$FILTER_BAM
 	fi
 }
