@@ -498,16 +498,22 @@ function makeTradPlots () {
 function groomBam () { # Perform bismark deduplication and conversion threshold filtering if requested
 	DEDUP_BAM=$SCRATCH_DIR"/temp.deduplicated.bam"
 	FILTER_BAM=$SCRATCH_DIR"/filter.bam"
-	if [[ $DEDUP == 1 ]] ; then
+	if [[ $DEDUP == 1 ]] ; then # This is very CPU inefficient, to iteratively sort for each of these steps. Maybe clean up at some point.
+		samtools sort -@ $THREADS -m "$SAMTOOLS_MEM" -T "$SCRATCH_DIR" -n -o "$TEMP1" "$INPUT"
 		echo "Deduplicating" $INPUT "to" $DEDUP_BAM
-		deduplicate_bismark --parallel $THREADS "$INPUT"
-		mv ${INPUT//.bam/.deduplicated.bam} $DEDUP_BAM
+		deduplicate_bismark --parallel $THREADS "$TEMP1"
+		mv ${TEMP1//.bam/.deduplicated.bam} $DEDUP_BAM
+		samtools sort -@ $THREADS -m "$SAMTOOLS_MEM" -T "$SCRATCH_DIR" -o "$TEMP1" $DEDUP_BAM
+		mv "$TEMP1" $DEDUP_BAM
 		INPUT=$DEDUP_BAM
 	fi
 	if [[ $NON_CPG_METH_THRESH != 0 ]] ; then
+		samtools sort -@ $THREADS -m "$SAMTOOLS_MEM" -T "$SCRATCH_DIR" -n -o "$TEMP1" "$INPUT"
 		echo "Filtering for non-conversion" $INPUT
-		filter_non_conversion --threshold $NON_CPG_METH_THRESH "$INPUT"
-		mv ${INPUT//.bam/.nonCG_filtered.bam} $FILTER_BAM
+		filter_non_conversion --threshold $NON_CPG_METH_THRESH "$TEMP1"
+		mv ${TEMP1//.bam/.nonCG_filtered.bam} $FILTER_BAM
+		samtools sort -@ $THREADS -m "$SAMTOOLS_MEM" -T "$SCRATCH_DIR" -o "$TEMP1" $FILTER_BAM
+		mv "$TEMP1" $FILTER_BAM
 		INPUT=$FILTER_BAM
 	fi
 }
