@@ -499,11 +499,11 @@ function groomBam () { # Perform bismark deduplication and conversion threshold 
 	DEDUP_BAM=$SCRATCH_DIR"/temp.deduplicated.bam"
 	FILTER_BAM=$SCRATCH_DIR"/filter.bam"
 	if [[ $DEDUP == 1 ]] ; then
-		bismark dedup --parallel $THREADS -o "$DEDUP_BAM" "$INPUT"
+		deduplicate_bismark --parallel $THREADS -o "$DEDUP_BAM" "$INPUT"
 		INPUT=$DEDUP_BAM
 	fi
 	if [[ $NON_CPG_METH_THRESH != 0 ]] ; then
-		bismark filter --threshold $NON_CPG_METH_THRESH "$INPUT"
+		filter_non_conversion --threshold $NON_CPG_METH_THRESH "$INPUT"
 		mv nonCG_filtered.bam $FILTER_BAM
 		INPUT=$FILTER_BAM
 	fi
